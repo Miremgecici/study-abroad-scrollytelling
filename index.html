@@ -1,0 +1,824 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hayalin Faturası</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Yerleşim: solda adım metinleri, sağda sabit grafik sahnesi (masaüstü); mobilde sahne üstte sabit, metinler altından kayar.
+   Tasarım: koyu mavi-siyah zemin, krem metin; turuncu = pahalı, yeşil = uygun, mavi = kira. Renkler doğrulanmış kategorik palettendir. */
+:root{
+  color-scheme:dark;
+  --bg:#101319; --panel:#151A22; --ink:#E7E3D9; --ink2:#B7B3A9; --ink3:#8C9099; --line:#272D38;
+  --hot:#d95926; --cool:#199e70; --rent:#3987e5; --mute:#5C6471; --dot:#939BA8;
+  --f-disp:'Fraunces',Georgia,'Times New Roman',serif;
+  --f-body:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+}
+@media (prefers-color-scheme:light){
+  :root:not([data-theme="dark"]){
+    color-scheme:light;
+    --bg:#F3F4F6; --panel:#FFFFFF; --ink:#1B2029; --ink2:#454C59; --ink3:#69707D; --line:#D9DDE3;
+    --hot:#eb6834; --cool:#1baf7a; --rent:#2a78d6; --mute:#A3ABB6; --dot:#6B7380;
+  }
+}
+:root[data-theme="light"]{
+  color-scheme:light;
+  --bg:#F3F4F6; --panel:#FFFFFF; --ink:#1B2029; --ink2:#454C59; --ink3:#69707D; --line:#D9DDE3;
+  --hot:#eb6834; --cool:#1baf7a; --rent:#2a78d6; --mute:#A3ABB6; --dot:#6B7380;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font:400 16px/1.6 var(--f-body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+}
+h1,h2,h3{font-family:var(--f-disp); font-weight:600; margin:0; text-wrap:balance; letter-spacing:-0.012em}
+p{margin:0}
+a{color:inherit}
+button{font:inherit; color:inherit}
+:focus-visible{outline:2px solid var(--rent); outline-offset:2px}
+.wrap{max-width:1280px; margin:0 auto}
+
+/* Hero */
+.hero{padding-block:clamp(40px,9vh,96px) clamp(16px,4vh,40px); position:relative}
+.hero h1{font-size:clamp(2.8rem,9vw,6.4rem); line-height:.96; font-weight:650; font-variation-settings:"opsz" 144; max-width:12ch}
+.hero .lead{margin-top:clamp(16px,3vh,28px); max-width:56ch; font-size:clamp(1.05rem,2.2vw,1.3rem); color:var(--ink2); line-height:1.55}
+.hero .hint{margin-top:22px; color:var(--ink3); font-size:.95rem}
+.theme{position:absolute; top:16px; right:0; background:transparent; border:1px solid var(--line); border-radius:999px; padding:6px 12px; font-size:.85rem; color:var(--ink2); cursor:pointer}
+.theme:hover{border-color:var(--ink3)}
+
+/* Scrolly */
+.scrolly{display:block; position:relative}
+.stage{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:5;
+  height:54vh; height:54svh; min-height:330px;
+  display:flex; flex-direction:column; gap:6px;
+  background:var(--bg); border-bottom:1px solid var(--line); padding:8px 0 6px;
+}
+.budget{flex:none}
+.b-head{display:flex; flex-wrap:wrap; justify-content:space-between; gap:0 12px; align-items:baseline; font-size:.82rem; color:var(--ink2); min-height:1.3em; white-space:nowrap}
+@media (max-width:520px){.b-head{font-size:.74rem}}
+.b-head b{font-weight:600; color:var(--ink)}
+.b-head .rel{color:var(--ink2); text-align:right}
+.b-track{position:relative; height:10px; margin-top:4px; background:var(--panel); border:1px solid var(--line); border-radius:6px; overflow:visible}
+.b-fill{position:absolute; left:0; top:0; bottom:0; width:0; border-radius:5px; background:var(--cool); transition:width .7s cubic-bezier(.4,0,.2,1), background-color .4s}
+.b-fill.over{background:var(--hot)}
+.b-mark{position:absolute; top:-5px; bottom:-5px; width:2px; background:var(--ink); border-radius:1px}
+.b-mark span{position:absolute; top:-1.35em; left:50%; transform:translateX(-50%); white-space:nowrap; font-size:.72rem; color:var(--ink3); display:none}
+.canvas{position:relative; flex:1; min-height:0}
+#chart{position:absolute; inset:0; width:100%; height:100%; display:block; overflow:visible}
+.bignum{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; opacity:0; pointer-events:none; transition:opacity .5s}
+#stage[data-view="number"] .bignum{opacity:1}
+.bignum .num{font-family:var(--f-disp); font-weight:600; font-variation-settings:"opsz" 144; font-size:clamp(4rem,17vw,9rem); line-height:1; letter-spacing:-0.03em; font-variant-numeric:tabular-nums}
+.bignum .unit{font-family:var(--f-disp); font-size:clamp(1.2rem,3.4vw,1.8rem); color:var(--ink2); margin-top:4px}
+.bignum .sub{font-size:.9rem; color:var(--ink3); margin-top:10px; max-width:28ch}
+.foot{flex:none; min-height:3.9em}
+.cap{font-family:var(--f-disp); font-size:clamp(.98rem,2.4vw,1.15rem); line-height:1.3; color:var(--ink)}
+.legend{display:flex; flex-wrap:wrap; gap:4px 14px; margin-top:4px; font-size:.78rem; color:var(--ink2); min-height:1.4em}
+.lg{display:inline-flex; align-items:center; gap:6px}
+.sw{width:10px; height:10px; border-radius:50%; background:var(--dot); display:inline-block; flex:none}
+.sw.hot{background:var(--hot)} .sw.cool{background:var(--cool)} .sw.rent{background:var(--rent); border-radius:2px} .sw.mute{background:var(--mute)}
+.sw.hotb{background:var(--hot); border-radius:2px}
+.sw.ring{background:var(--cool); box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px var(--ink)}
+
+.steps{position:relative}
+.step{min-height:78vh; min-height:78svh; padding:22px 0 26px; display:flex; align-items:flex-start}
+.card{max-width:46ch; opacity:.32; transition:opacity .45s; display:flex; flex-direction:column; gap:10px}
+.step.on .card{opacity:1}
+.card .pn{font-size:.9rem; font-weight:500; color:var(--ink3); letter-spacing:.01em}
+.card h2{font-size:clamp(2rem,5vw,3rem); line-height:1.02; font-weight:650}
+.card h3{font-size:clamp(1.35rem,3.4vw,1.8rem); line-height:1.12}
+.card p{font-size:1.04rem; color:var(--ink2); line-height:1.62}
+.card p.note{font-size:.88rem; color:var(--ink3)}
+.card p b{color:var(--ink); font-weight:600}
+
+@media (min-width:900px){
+  .scrolly{display:grid; grid-template-columns:minmax(320px,.38fr) 1fr; column-gap:clamp(24px,4vw,56px)}
+  .stage{grid-column:2; grid-row:1; height:100vh; height:100svh; min-height:0; padding:22px 0 20px; border-bottom:0; background:transparent}
+  .stage::before{content:""; position:absolute; inset:14px -10px; background:var(--panel); border:1px solid var(--line); border-radius:14px; z-index:-1}
+  .stage{padding-inline:18px}
+  .steps{grid-column:1; grid-row:1}
+  .step{min-height:100vh; min-height:100svh; align-items:center; padding-block:0}
+}
+
+/* Grafik katmanları */
+.v{opacity:0; pointer-events:none; transition:opacity .5s}
+#stage[data-view="strip"] .v-strip,#stage[data-view="bars"] .v-bars,#stage[data-view="bubble"] .v-bubble,
+#stage[data-view="scatter"] .v-scatter,#stage[data-view="duo"] .v-duo{opacity:1; pointer-events:auto}
+.t{font-family:var(--f-body); font-size:12px; fill:var(--ink2)}
+.t.strong{fill:var(--ink); font-weight:600}
+.t.big{font-family:var(--f-disp); font-size:22px; fill:var(--ink); font-weight:600}
+.t.mid{text-anchor:middle}
+.axl{stroke:var(--ink3); stroke-width:1}
+.grid{stroke:var(--line); stroke-width:1}
+.tick{fill:var(--ink3); font-family:var(--f-body); font-size:11px}
+.dot{fill:var(--dot); opacity:.7; transition:fill .5s,opacity .5s,transform .5s; transform-box:fill-box; transform-origin:center}
+.dot.mute{fill:var(--mute); opacity:.55}
+.dot.hot{fill:var(--hot); opacity:1}
+.dot.cool{fill:var(--cool); opacity:1}
+.dot.dim{opacity:.1}
+.dot.big{transform:scale(2.6)}
+.al,.at{opacity:0; transition:opacity .45s}
+.al{stroke:var(--ink3); stroke-width:1.2; stroke-dasharray:4 4; fill:none}
+#stage[data-ann~="line15"] .a-line15,#stage[data-ann~="line20"] .a-line20,#stage[data-ann~="medians"] .a-medians,
+#stage[data-ann~="extremes"] .a-extremes,#stage[data-ann~="usa"] .a-usa,#stage[data-ann~="h20"] .a-h20,
+#stage[data-ann~="trus"] .a-trus,#stage[data-ann~="zero"] .a-zero,#stage[data-ann~="trend"] .a-trend,
+#stage[data-ann~="trend2"] .a-trend2{opacity:1}
+.seg{transition:opacity .4s}
+.bub{transition:transform .85s cubic-bezier(.4,0,.2,1); }
+.bub circle{fill:var(--mute); opacity:.55; stroke:var(--panel); stroke-width:1.5; transition:fill .5s,opacity .5s}
+.bub.hot circle{fill:var(--hot); opacity:1}
+.bub.cool circle{fill:var(--cool); opacity:1}
+.bub.ring circle{stroke:var(--ink); stroke-width:2.2}
+.bub.dim circle{opacity:.25}
+.bub text{opacity:0; transition:opacity .4s; paint-order:stroke; stroke:var(--panel); stroke-width:3px}
+.bub.lab text{opacity:1}
+.ax{opacity:0; transition:opacity .5s}
+#stage[data-mode="yasam"] .ax-yasam,#stage[data-mode="ucret"] .ax-ucret{opacity:1}
+.trline{fill:none; stroke:var(--ink); stroke-width:2; transition:opacity .4s,stroke-dasharray .4s}
+.trline.faint{opacity:.35; stroke-dasharray:3 5}
+#tip{position:fixed; left:0; top:0; z-index:50; pointer-events:none; max-width:min(300px,86vw); background:var(--panel); border:1px solid var(--ink3); border-radius:8px; padding:8px 10px; font-size:.8rem; line-height:1.45; color:var(--ink); box-shadow:0 6px 20px rgba(0,0,0,.28)}
+#tip b{font-weight:600} #tip span{color:var(--ink2)}
+
+/* Bölüm göstergesi */
+.dots{position:fixed; right:max(8px,env(safe-area-inset-right,0px)); top:50%; transform:translateY(-50%); z-index:20; display:none; flex-direction:column; gap:12px}
+.dots a{display:block; width:11px; height:11px; border-radius:50%; border:1.5px solid var(--ink3); background:transparent; position:relative}
+.dots a.on{background:var(--ink); border-color:var(--ink)}
+.dots a span{position:absolute; right:20px; top:50%; transform:translateY(-50%); font-size:.78rem; white-space:nowrap; color:var(--ink2); background:var(--bg); padding:2px 8px; border-radius:6px; opacity:0; pointer-events:none; transition:opacity .2s}
+.dots a:hover span,.dots a:focus-visible span{opacity:1}
+@media (min-width:1360px){.dots{display:flex}}
+
+/* Kapanış */
+.finale{padding-block:clamp(48px,10vh,110px) 40px; border-top:1px solid var(--line)}
+.finale h2{font-size:clamp(2.1rem,5.4vw,3.6rem); line-height:1.02; font-weight:650; max-width:16ch}
+.f-lead{margin-top:16px; max-width:58ch; font-size:1.1rem; color:var(--ink2)}
+.f-grid{margin-top:32px; display:grid; gap:28px; grid-template-columns:minmax(0,1fr)}
+@media (min-width:900px){.f-grid{grid-template-columns:minmax(300px,.34fr) minmax(0,1fr); gap:clamp(24px,4vw,56px); align-items:start}}
+.f-ctrl{display:flex; flex-direction:column; gap:20px; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:20px; min-width:0}
+@media (min-width:900px){.f-ctrl{position:sticky; top:20px}}
+.fld{display:flex; flex-direction:column; gap:6px; min-width:0}
+.fld label,.fld .lab{font-size:.9rem; font-weight:500; display:flex; justify-content:space-between; gap:10px}
+.fld output{font-variant-numeric:tabular-nums; color:var(--ink); font-weight:600}
+input[type=range]{width:100%; accent-color:var(--cool); height:28px; margin:0}
+.chk{display:flex; align-items:center; gap:10px; font-size:.95rem; cursor:pointer}
+.chk input{width:20px; height:20px; accent-color:var(--cool); margin:0}
+.ex{display:flex; flex-direction:column; gap:8px}
+.ex .lab{font-size:.85rem; color:var(--ink3)}
+.ex button{text-align:left; background:transparent; border:1px solid var(--line); border-radius:8px; padding:8px 12px; font-size:.88rem; color:var(--ink2); cursor:pointer}
+.ex button:hover{border-color:var(--ink3); color:var(--ink)}
+details.w summary{cursor:pointer; font-size:.88rem; color:var(--ink3)}
+details.w .fld{margin-top:12px}
+.f-sum{font-family:var(--f-disp); font-size:clamp(1.3rem,3vw,1.7rem); line-height:1.25; min-height:2.5em}
+.f-sum .n{font-variant-numeric:tabular-nums}
+.f-note{margin-top:6px; font-size:.84rem; color:var(--ink3)}
+.ucards{margin-top:18px; display:flex; flex-direction:column; gap:10px}
+.ucard{border:1px solid var(--line); border-radius:10px; background:var(--panel); min-width:0}
+.ucard summary{list-style:none; cursor:pointer; padding:14px 16px; display:grid; gap:8px}
+.ucard summary::-webkit-details-marker{display:none}
+.u-head{display:flex; justify-content:space-between; gap:12px; align-items:baseline}
+.u-head b{font-family:var(--f-disp); font-size:1.2rem; font-weight:600}
+.u-head span{font-size:.85rem; color:var(--ink2); font-variant-numeric:tabular-nums}
+.u-bar{height:8px; border-radius:5px; background:var(--bg); border:1px solid var(--line); overflow:hidden}
+.u-bar i{display:block; height:100%; background:var(--cool); border-radius:4px}
+.u-meta{font-size:.84rem; color:var(--ink2); line-height:1.5}
+.ucard[open] summary{border-bottom:1px solid var(--line)}
+.tw{overflow-x:auto; padding:4px 16px 12px}
+table{border-collapse:collapse; width:100%; font-size:.84rem; font-variant-numeric:tabular-nums}
+th,td{text-align:right; padding:7px 8px; border-bottom:1px solid var(--line); white-space:nowrap}
+th:first-child,td:first-child{text-align:left; white-space:normal; min-width:150px}
+th{color:var(--ink3); font-weight:500}
+.more{margin-top:12px; background:transparent; border:1px solid var(--line); border-radius:8px; padding:9px 16px; cursor:pointer; color:var(--ink2)}
+.more:hover{border-color:var(--ink3); color:var(--ink)}
+.empty{padding:24px; border:1px dashed var(--line); border-radius:10px; color:var(--ink2)}
+
+/* Alt bilgi */
+footer{border-top:1px solid var(--line); padding-block:36px 56px; color:var(--ink2); font-size:.92rem}
+footer h3{font-size:1.4rem; margin-bottom:12px}
+footer ul{margin:0; padding-left:1.2em; display:flex; flex-direction:column; gap:8px; max-width:78ch}
+footer details{margin-top:22px}
+footer summary{cursor:pointer; font-weight:500; color:var(--ink)}
+.credit{margin-top:26px; color:var(--ink3); font-size:.85rem}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{transition-duration:.01ms !important; animation-duration:.01ms !important}
+}
+</style>
+
+</head>
+<body>
+<noscript><p style="padding:24px">Bu veri hikâyesi JavaScript gerektirir.</p></noscript>
+
+<div class="wrap">
+<header class="hero">
+  <button class="theme" id="theme" type="button" aria-label="Temayı değiştir">Tema</button>
+  <h1>Hayalin Faturası</h1>
+  <p class="lead">Dünyada eğitim almak yalnızca okulun kalitesiyle ölçülmez. Bütçe ile coğrafya arasında acımasız bir denge var. 71 ülkedeki 622 üniversitenin 868 programına yıllık maliyet açısından baktık.</p>
+  <p class="hint">Aşağı kaydır. Grafikler sen ilerledikçe değişecek.</p>
+</header>
+
+<main>
+<section class="scrolly" id="scrolly" aria-label="Veri hikâyesi">
+  <div class="stage" id="stage" data-view="number" data-ann="" data-mode="yasam">
+    <div class="budget" aria-live="off">
+      <div class="b-head"><span><b id="b-name">Deniz'in yıllık bütçesi</b></span><span class="rel"><span id="b-val">15.000 $</span> <span id="b-rel"></span></span></div>
+      <div class="b-track"><div class="b-fill" id="b-fill"></div><div class="b-mark" id="b-mark"></div></div>
+    </div>
+    <div class="canvas" id="canvas">
+      <div class="bignum"><span class="num" id="num">17.750</span><span class="unit">dolar / yıl</span><span class="sub">868 program kaydının ortanca yıllık maliyeti</span></div>
+      <svg id="chart" role="img" aria-label="Grafik">
+        <g class="v v-strip" id="v-strip"></g>
+        <g class="v v-bars" id="v-bars"></g>
+        <g class="v v-bubble" id="v-bubble"></g>
+        <g class="v v-scatter" id="v-scatter"></g>
+        <g class="v v-duo" id="v-duo"></g>
+      </svg>
+    </div>
+    <div class="foot"><p class="cap" id="cap">Ortanca öğrenci yılda yaklaşık 17.750 dolar öder</p><div class="legend" id="legend"></div></div>
+  </div>
+
+  <div class="steps" id="steps">
+    <article class="step on" data-step="i1" id="s-i1"><div class="card">
+      <h2>Eğitimin bedeli nedir?</h2>
+      <p>Bir kabul mektubu kâğıt üzerinde yalnızca bir hayaldir; faturası ayrıca gelir. 71 ülkede, 622 üniversitede bir yılın bedeline baktık.</p>
+      <p>Tanış: Deniz. Yurt dışında okumak istiyor ve yıllık bütçesi <b>15.000 dolar</b>. Ortanca program ise yılda yaklaşık <b>17.750 dolara</b> geliyor.</p>
+    </div></article>
+    <article class="step" data-step="i2" id="s-i2"><div class="card">
+      <h3>Her nokta bir hayal</h3>
+      <p>868 program kaydını tek tek yerleştirdik. Soldan sağa gittikçe yıllık maliyet artıyor. Solda kalabalık bir yığılma, sağda seyrek bir kuyruk var.</p>
+    </div></article>
+    <article class="step" data-step="i3" id="s-i3"><div class="card">
+      <h3>33 kat fark</h3>
+      <p>En ucuzu Arjantin'deki National University of Cuyo: yılda <b>2.760 dolar</b>. En pahalısı ABD'deki Columbia University: <b>92.000 dolar</b>. Aynı diploma hayali, iki ayrı fatura.</p>
+    </div></article>
+    <article class="step" data-step="i4" id="s-i4"><div class="card">
+      <h3>Deniz'in bütçesi bu çizginin neresinde?</h3>
+      <p>15.000 dolarlık bütçe 868 programın <b>387'sine</b> yetiyor, yani yüzde 45'ine. Geri kalan yarıdan fazlası için Deniz'in başka bir plana ihtiyacı var. Önce vitrindeki dört ülkeye bakalım.</p>
+    </div></article>
+
+    <article class="step" data-step="p1a" id="s-p1a"><div class="card">
+      <span class="pn">1. Perde</span>
+      <h2>Devlerin maliyeti</h2>
+      <p>Dört ülke vitrini tutuyor: ABD, İngiltere, Kanada ve Avustralya. 868 programın 316'sı, yani yüzde 36'sı bu dört ülkede. Ortanca yıllık maliyetleri <b>48.600 dolar</b>.</p>
+    </div></article>
+    <article class="step" data-step="p1b" id="s-p1b"><div class="card">
+      <h3>Faturanın üçte ikisi okul ücreti</h3>
+      <p>ABD'de ortanca okul ücreti 49.000 dolar, ortanca aylık kira 1.800 dolar. Dört devin hepsinde okul ücreti, yıllık toplamın yaklaşık üçte ikisi. Ortanca ABD programı Deniz'in bütçesinin <b>4,7 katı</b>.</p>
+    </div></article>
+    <article class="step" data-step="p1c" id="s-p1c"><div class="card">
+      <h3>En ucuz Amerikan programı bile 42.100 dolar</h3>
+      <p>ABD'de 68 programdan hiçbiri 42.100 doların altına inmiyor. En pahalı üç isim Columbia (92.000), Stanford (85.800) ve Harvard (84.400).</p>
+    </div></article>
+    <article class="step" data-step="p1d" id="s-p1d"><div class="card">
+      <h3>Peki öbürü?</h3>
+      <p>Diğer 67 ülkede ortanca maliyet <b>12.000 dolar</b>, yani dört devin dörtte biri. Singapur 52.000 dolarla ABD'nin ardından ikinci; İngiltere ve Kanada'yı geçiyor.</p>
+    </div></article>
+
+    <article class="step" data-step="p2a" id="s-p2a"><div class="card">
+      <span class="pn">2. Perde</span>
+      <h2>Gizli hazineler</h2>
+      <p>Haritanın öbür ucunda sessiz bir kalabalık var. Programların <b>yüzde 52'si</b> yılda 20.000 doların altında.</p>
+    </div></article>
+    <article class="step" data-step="p2b" id="s-p2b"><div class="card">
+      <h3>Tanıdık isimler, makul fiyatlar</h3>
+      <p>Almanya'da ortanca okul ücreti sıfır, ortanca yıllık maliyet <b>11.400 dolar</b>: ABD'nin altıda biri. Japonya 16.150, Güney Kore 13.140 dolar.</p>
+      <p>Popülerlik puanı 3 ve üzeri olan 8 ülkeden yalnızca bu üçü 20.000 doların altında.</p>
+    </div></article>
+    <article class="step" data-step="p2c" id="s-p2c"><div class="card">
+      <h3>Ücretsiz, ucuz demek değil</h3>
+      <p>10 ülkede 98 programın okul ücreti sıfır. Ama İsviçre'de ücret 1.460 dolarken yıllık toplam <b>21.840 dolara</b> çıkıyor, çünkü kira toplamın yüzde 93'ü. İzlanda ücretsiz ama maliyeti 11.700; Danimarka 13.200 ile Almanya'dan pahalı.</p>
+    </div></article>
+    <article class="step" data-step="p2d" id="s-p2d"><div class="card">
+      <h3>Türkiye bu haritada nerede?</h3>
+      <p>Türkiye'de ortanca program yılda <b>6.100 dolar</b>: okul ücreti 1.200, aylık kira 400, yaşam endeksi 46,5. ABD'nin yaklaşık 11,5 kat altında.</p>
+      <p class="note">Arjantin 3.240, Brezilya 5.100, Polonya 9.430 dolarla yine bütçeye sığıyor. Veride kalite sütunu yok; bu yüzden bu ülkelere "ucuz" diyoruz, "daha iyi" demiyoruz.</p>
+    </div></article>
+
+    <article class="step" data-step="p3a" id="s-p3a"><div class="card">
+      <span class="pn">3. Perde</span>
+      <h2>Popülerlik ve gerçeklik</h2>
+      <p>Herkesin gitmek istediği yer, herkesin en çok ödeyeceği yer mi? Önce ülkeleri popülerlik puanına göre dizelim. 71 ülkenin 41'i sıfırda.</p>
+      <p class="note">Veri notu: Bu veri setinde popülerlik endeksi, üniversite sayısıyla aynı değerdir.</p>
+    </div></article>
+    <article class="step" data-step="p3b" id="s-p3b"><div class="card">
+      <h3>Popüler olan pahalı</h3>
+      <p>Popülerlik arttıkça maliyet de artıyor: korelasyon katsayısı <b>r = 0,61</b>. Dört dev de grafiğin üst yarısında.</p>
+    </div></article>
+    <article class="step" data-step="p3c" id="s-p3c"><div class="card">
+      <h3>Bu ilişki büyük ölçüde tek bir ülkeye bağlı</h3>
+      <p>ABD'yi çıkarınca korelasyon <b>0,45'e</b> iniyor ve çizgi yatıklaşıyor. Popülerlik ile maliyet arasındaki bağ, uçtaki tek bir ülkenin gölgesinde olduğundan güçlü görünüyor.</p>
+    </div></article>
+    <article class="step" data-step="p3d" id="s-p3d"><div class="card">
+      <h3>Çizginin altında kalanlar</h3>
+      <p>Almanya (puan 13), Japonya (12) ve Güney Kore (3) çizginin belirgin biçimde altında. Japonya'nın puanı İngiltere'nin iki katı, maliyeti ise 2,7 kat düşük.</p>
+    </div></article>
+    <article class="step" data-step="p3e" id="s-p3e"><div class="card">
+      <h3>Aynı puan, 4,4 kat fark</h3>
+      <p>Almanya ve Avustralya'nın popülerlik puanı aynı: 13. Biri yılda 11.400 dolara, öbürü 50.100 dolara geliyor. Aradaki 38.700 dolar neyin bedeli? Veri bunu söylemiyor; ama soruyu sormayı hak ediyor.</p>
+    </div></article>
+  </div>
+</section>
+
+<section class="finale" id="bul" aria-labelledby="f-title">
+  <h2 id="f-title">Hayalin faturasını sen yaz</h2>
+  <p class="f-lead">Rakamlar bitti; şimdi sıra sende. Bütçeni gir, yaşam pahalılığı sınırını seç, popülerlikten ne kadar vazgeçebileceğini söyle. 868 program arasından uyanlar aşağıda listelenir.</p>
+  <div class="f-grid">
+    <form class="f-ctrl" id="f-form" onsubmit="return false">
+      <div class="fld"><label for="f-budget">Yıllık toplam bütçe <output id="o-budget">15.000 $</output></label>
+        <input type="range" id="f-budget" min="3000" max="92000" step="500" value="15000"></div>
+      <div class="fld"><label for="f-yasam">En yüksek yaşam endeksi <output id="o-yasam">70</output></label>
+        <input type="range" id="f-yasam" min="31" max="123" step="1" value="70"></div>
+      <div class="fld"><label for="f-pop">En az popülerlik puanı <output id="o-pop">0</output></label>
+        <input type="range" id="f-pop" min="0" max="17" step="1" value="0"></div>
+      <label class="chk"><input type="checkbox" id="f-free"> Sadece okul ücreti sıfır olanlar</label>
+      <div class="ex"><span class="lab">Denenecek örnekler</span>
+        <button type="button" data-b="15000" data-y="123" data-p="3" data-f="0">15.000 $, popülerlik en az 3</button>
+        <button type="button" data-b="15000" data-y="70" data-p="0" data-f="1">15.000 $, yaşam endeksi en çok 70, ücretsiz</button>
+        <button type="button" data-b="25000" data-y="123" data-p="5" data-f="0">25.000 $, popülerlik en az 5</button>
+        <button type="button" data-b="60000" data-y="123" data-p="10" data-f="0">60.000 $, popülerlik en az 10</button>
+      </div>
+      <details class="w"><summary>Sıralama ağırlıkları</summary>
+        <div class="fld"><label for="w-cost">Maliyet rahatlığı <output id="o-wc">5</output></label><input type="range" id="w-cost" min="0" max="10" value="5"></div>
+        <div class="fld"><label for="w-pop">Popülerlik <output id="o-wp">3</output></label><input type="range" id="w-pop" min="0" max="10" value="3"></div>
+        <div class="fld"><label for="w-liv">Düşük yaşam endeksi <output id="o-wl">2</output></label><input type="range" id="w-liv" min="0" max="10" value="2"></div>
+      </details>
+    </form>
+    <div class="f-out">
+      <p class="f-sum" id="f-sum" aria-live="polite"></p>
+      <p class="f-note" id="f-note"></p>
+      <div class="ucards" id="ucards"></div>
+      <button type="button" class="more" id="f-more" hidden>Tüm ülkeleri göster</button>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <h3>Veri notları</h3>
+  <ul>
+    <li><b>Veri:</b> Uluslararası üniversite maliyetleri ve yaşam endeksleri veri seti. 907 satırın 39'u birebir tekrar olduğu için silindi; 868 program kaldı (622 üniversite, 71 ülke).</li>
+    <li><b>Maliyet:</b> Toplam yıllık maliyet = okul ücreti + 12 × aylık kira. Yaşam endeksi toplama dahil değil. Para birimi veride belirtilmiyor; USD varsayıldı.</li>
+    <li><b>Yaşam endeksi:</b> Mısır'da 5, Tunus'ta 3 hücre bozuk olduğundan boş bırakıldı. Yaşam endeksi filtresi açıkken bu 8 program listeye girmez.</li>
+    <li><b>Popülerlik:</b> Veri setinde popülerlik endeksi, üniversite sayısıyla aynı değerdir; gerçek başvuru ya da talep verisi değildir. 71 ülkenin 41'inin puanı 0.</li>
+    <li><b>Kalite:</b> Veride akademik kalite sütunu yok. "Gizli hazine" ucuz demektir, daha kaliteli demek değildir.</li>
+    <li><b>Yöntem:</b> Ülke karşılaştırmalarında ortanca kullanıldı. Yığılmış çubuklarda ortalama kullanıldı, çünkü ortalamada okul ücreti + 12 × kira toplamı tam verir. Korelasyon (r) 71 ülke üzerinden hesaplandı ve çok sayıda sıfır içeren dağılımdan etkilenir.</li>
+    <li><b>Deniz:</b> Kurgusal bir karakterdir; 15.000 dolarlık bütçe örnek olarak seçildi.</li>
+  </ul>
+  <details><summary>Ülke özet tablosunu göster (71 ülke)</summary><div class="tw" id="ctable"></div></details>
+  <p class="credit">Manisa Celal Bayar Üniversitesi, Büyük Veri Analitiği dersi veri hikâyesi ödevi, 2026.</p>
+</footer>
+</div>
+
+<nav class="dots" id="dots" aria-label="Bölümler">
+  <a href="#s-i1" data-g="i"><span>Giriş</span></a>
+  <a href="#s-p1a" data-g="p1"><span>1. Perde</span></a>
+  <a href="#s-p2a" data-g="p2"><span>2. Perde</span></a>
+  <a href="#s-p3a" data-g="p3"><span>3. Perde</span></a>
+  <a href="#bul" data-g="f"><span>Kapanış</span></a>
+</nav>
+<div id="tip" hidden></div>
+
+<script id="veri" type="application/json">{"meta":{"ham_satir":907,"tekrar_silinen":39,"satir":868,"ulke":71,"universite":622,"yasam_bos":8,"medyan_toplam":17750.0},"programlar":[{"ulke":"ABD","uni":"Harvard University","ucret":55400,"kira":2200,"yasam":83.5,"toplam":81800,"pop":17},{"ulke":"İngiltere","uni":"Imperial College London","ucret":41200,"kira":1800,"yasam":75.8,"toplam":62800,"pop":6},{"ulke":"Kanada","uni":"University of Toronto","ucret":38500,"kira":1600,"yasam":72.5,"toplam":57700,"pop":5},{"ulke":"Avustralya","uni":"University of Melbourne","ucret":42000,"kira":1400,"yasam":71.2,"toplam":58800,"pop":13},{"ulke":"Almanya","uni":"Technical University of Munich","ucret":500,"kira":1100,"yasam":70.5,"toplam":13700,"pop":13},{"ulke":"Japonya","uni":"University of Tokyo","ucret":8900,"kira":1300,"yasam":76.4,"toplam":24500,"pop":12},{"ulke":"Hollanda","uni":"University of Amsterdam","ucret":15800,"kira":1500,"yasam":73.2,"toplam":33800,"pop":3},{"ulke":"Singapur","uni":"National University of Singapore","ucret":35000,"kira":1900,"yasam":81.1,"toplam":57800,"pop":2},{"ulke":"Fransa","uni":"Sorbonne University","ucret":4500,"kira":1400,"yasam":74.6,"toplam":21300,"pop":1},{"ulke":"İsviçre","uni":"ETH Zurich","ucret":1460,"kira":2100,"yasam":91.5,"toplam":26660,"pop":2},{"ulke":"İsveç","uni":"KTH Royal Institute","ucret":0,"kira":1200,"yasam":71.8,"toplam":14400,"pop":2},{"ulke":"Danimarka","uni":"University of Copenhagen","ucret":0,"kira":1300,"yasam":73.4,"toplam":15600,"pop":2},{"ulke":"Çin","uni":"Tsinghua University","ucret":8900,"kira":800,"yasam":52.3,"toplam":18500,"pop":1},{"ulke":"Güney Kore","uni":"Seoul National University","ucret":7200,"kira":900,"yasam":68.7,"toplam":18000,"pop":3},{"ulke":"İrlanda","uni":"Trinity College Dublin","ucret":28900,"kira":1600,"yasam":72.9,"toplam":48100,"pop":2},{"ulke":"Güney Kore","uni":"Pusan National University","ucret":5900,"kira":700,"yasam":62.4,"toplam":14300,"pop":3},{"ulke":"Yeni Zelanda","uni":"University of Auckland","ucret":28500,"kira":1200,"yasam":69.8,"toplam":42900,"pop":1},{"ulke":"Avusturya","uni":"University of Vienna","ucret":1500,"kira":950,"yasam":67.4,"toplam":12900,"pop":1},{"ulke":"Belçika","uni":"KU Leuven","ucret":3500,"kira":1000,"yasam":68.9,"toplam":15500,"pop":1},{"ulke":"ABD","uni":"University of Michigan","ucret":52300,"kira":1800,"yasam":72.5,"toplam":73900,"pop":17},{"ulke":"ABD","uni":"Georgia Tech","ucret":43800,"kira":1700,"yasam":71.5,"toplam":64200,"pop":17},{"ulke":"ABD","uni":"UT Austin","ucret":40900,"kira":1600,"yasam":72.4,"toplam":60100,"pop":17},{"ulke":"İngiltere","uni":"University of Bristol","ucret":31200,"kira":1100,"yasam":69.8,"toplam":44400,"pop":6},{"ulke":"Kanada","uni":"University of Ottawa","ucret":28900,"kira":1300,"yasam":68.5,"toplam":44500,"pop":5},{"ulke":"Hong Kong","uni":"HKUST","ucret":22000,"kira":1500,"yasam":78.6,"toplam":40000,"pop":1},{"ulke":"Portekiz","uni":"University of Lisbon","ucret":3500,"kira":800,"yasam":58.4,"toplam":13100,"pop":1},{"ulke":"İsrail","uni":"Tel Aviv University","ucret":12000,"kira":1200,"yasam":76.2,"toplam":26400,"pop":1},{"ulke":"Tayvan","uni":"National Taiwan University","ucret":5200,"kira":700,"yasam":62.8,"toplam":13600,"pop":1},{"ulke":"Çekya","uni":"Charles University","ucret":9800,"kira":650,"yasam":54.6,"toplam":17600,"pop":1},{"ulke":"ABD","uni":"Stanford University","ucret":54200,"kira":2300,"yasam":89.5,"toplam":81800,"pop":17},{"ulke":"ABD","uni":"MIT","ucret":53800,"kira":2200,"yasam":83.2,"toplam":80200,"pop":17},{"ulke":"İngiltere","uni":"University of Oxford","ucret":29800,"kira":1600,"yasam":74.5,"toplam":49000,"pop":6},{"ulke":"İngiltere","uni":"University of Cambridge","ucret":31200,"kira":1700,"yasam":75.2,"toplam":51600,"pop":6},{"ulke":"Almanya","uni":"Heidelberg University","ucret":500,"kira":900,"yasam":68.4,"toplam":11300,"pop":13},{"ulke":"İsviçre","uni":"ETH Basel","ucret":1500,"kira":1800,"yasam":88.6,"toplam":23100,"pop":2},{"ulke":"Hollanda","uni":"TU Delft","ucret":4800,"kira":1200,"yasam":71.8,"toplam":19200,"pop":3},{"ulke":"Singapur","uni":"NTU Singapore","ucret":8900,"kira":1600,"yasam":81.5,"toplam":28100,"pop":2},{"ulke":"Kanada","uni":"University of Waterloo","ucret":21500,"kira":1300,"yasam":69.8,"toplam":37100,"pop":5},{"ulke":"Avustralya","uni":"Australian National University","ucret":29800,"kira":1400,"yasam":70.2,"toplam":46600,"pop":13},{"ulke":"İsveç","uni":"Lund University","ucret":0,"kira":1000,"yasam":69.5,"toplam":12000,"pop":2},{"ulke":"ABD","uni":"UC San Diego","ucret":44200,"kira":1900,"yasam":79.5,"toplam":67000,"pop":17},{"ulke":"ABD","uni":"University of Washington","ucret":38900,"kira":2000,"yasam":83.4,"toplam":62900,"pop":17},{"ulke":"Kanada","uni":"University of Alberta","ucret":22800,"kira":1200,"yasam":67.8,"toplam":37200,"pop":5},{"ulke":"İngiltere","uni":"University of Glasgow","ucret":33500,"kira":1100,"yasam":67.5,"toplam":46700,"pop":6},{"ulke":"Hindistan","uni":"Indian Institute of Science","ucret":2500,"kira":500,"yasam":45.6,"toplam":8500,"pop":1},{"ulke":"Danimarka","uni":"Aalborg University","ucret":0,"kira":900,"yasam":69.8,"toplam":10800,"pop":2},{"ulke":"Polonya","uni":"University of Warsaw","ucret":3800,"kira":650,"yasam":51.2,"toplam":11600,"pop":1},{"ulke":"İrlanda","uni":"NUI Galway","ucret":25800,"kira":1100,"yasam":68.5,"toplam":39000,"pop":2},{"ulke":"Güney Kore","uni":"KAIST","ucret":6900,"kira":700,"yasam":65.4,"toplam":15300,"pop":3},{"ulke":"Malezya","uni":"University of Malaya","ucret":4800,"kira":500,"yasam":48.2,"toplam":10800,"pop":1},{"ulke":"ABD","uni":"UC Berkeley","ucret":44900,"kira":2100,"yasam":84.2,"toplam":70100,"pop":17},{"ulke":"İngiltere","uni":"University of Manchester","ucret":32000,"kira":1200,"yasam":68.4,"toplam":46400,"pop":6},{"ulke":"Kanada","uni":"University of British Columbia","ucret":31200,"kira":1700,"yasam":71.2,"toplam":51600,"pop":5},{"ulke":"Avustralya","uni":"University of Sydney","ucret":35000,"kira":1600,"yasam":72.8,"toplam":54200,"pop":13},{"ulke":"Almanya","uni":"Free University of Berlin","ucret":0,"kira":900,"yasam":65.2,"toplam":10800,"pop":13},{"ulke":"İspanya","uni":"University of Barcelona","ucret":2800,"kira":950,"yasam":62.4,"toplam":14200,"pop":1},{"ulke":"İtalya","uni":"Politecnico di Milano","ucret":4200,"kira":1100,"yasam":63.8,"toplam":17400,"pop":1},{"ulke":"Hollanda","uni":"Erasmus University","ucret":11200,"kira":1300,"yasam":71.5,"toplam":26800,"pop":3},{"ulke":"Finlandiya","uni":"University of Helsinki","ucret":0,"kira":1100,"yasam":70.2,"toplam":13200,"pop":1},{"ulke":"Norveç","uni":"University of Oslo","ucret":0,"kira":1400,"yasam":75.6,"toplam":16800,"pop":1},{"ulke":"Japonya","uni":"Osaka University","ucret":6800,"kira":900,"yasam":71.2,"toplam":17600,"pop":12},{"ulke":"Japonya","uni":"Kyoto University","ucret":8500,"kira":900,"yasam":71.8,"toplam":19300,"pop":12},{"ulke":"Japonya","uni":"Nagoya University","ucret":7800,"kira":750,"yasam":68.5,"toplam":16800,"pop":12},{"ulke":"Japonya","uni":"Tohoku University","ucret":8200,"kira":650,"yasam":65.4,"toplam":16000,"pop":12},{"ulke":"Japonya","uni":"Kyushu University","ucret":7500,"kira":600,"yasam":64.8,"toplam":14700,"pop":12},{"ulke":"Japonya","uni":"Hokkaido University","ucret":8100,"kira":550,"yasam":63.5,"toplam":14700,"pop":12},{"ulke":"Japonya","uni":"Tokyo Institute of Technology","ucret":8900,"kira":1100,"yasam":76.4,"toplam":22100,"pop":12},{"ulke":"Japonya","uni":"University of Tsukuba","ucret":7200,"kira":600,"yasam":64.2,"toplam":14400,"pop":12},{"ulke":"Japonya","uni":"Kobe University","ucret":7900,"kira":700,"yasam":67.8,"toplam":16300,"pop":12},{"ulke":"Japonya","uni":"Kanazawa University","ucret":7100,"kira":500,"yasam":62.5,"toplam":13100,"pop":12},{"ulke":"Japonya","uni":"Hiroshima University","ucret":7600,"kira":550,"yasam":63.8,"toplam":14200,"pop":12},{"ulke":"Avustralya","uni":"University of Adelaide","ucret":32800,"kira":1100,"yasam":68.5,"toplam":46000,"pop":13},{"ulke":"Avustralya","uni":"University of Western Australia","ucret":34500,"kira":1200,"yasam":69.8,"toplam":48900,"pop":13},{"ulke":"Avustralya","uni":"Griffith University","ucret":31200,"kira":1100,"yasam":67.5,"toplam":44400,"pop":13},{"ulke":"Avustralya","uni":"University of Tasmania","ucret":30800,"kira":950,"yasam":65.4,"toplam":42200,"pop":13},{"ulke":"Avustralya","uni":"University of Newcastle","ucret":31500,"kira":1000,"yasam":66.8,"toplam":43500,"pop":13},{"ulke":"Avustralya","uni":"University of Wollongong","ucret":32900,"kira":1050,"yasam":67.2,"toplam":45500,"pop":13},{"ulke":"Avustralya","uni":"Charles Darwin University","ucret":29800,"kira":900,"yasam":64.5,"toplam":40600,"pop":13},{"ulke":"Avustralya","uni":"James Cook University","ucret":31200,"kira":950,"yasam":65.8,"toplam":42600,"pop":13},{"ulke":"Avustralya","uni":"USC","ucret":29500,"kira":1000,"yasam":66.2,"toplam":41500,"pop":13},{"ulke":"Avustralya","uni":"University of New England","ucret":30500,"kira":850,"yasam":64.8,"toplam":40700,"pop":13},{"ulke":"Almanya","uni":"TU Dresden","ucret":500,"kira":750,"yasam":65.8,"toplam":9500,"pop":13},{"ulke":"Almanya","uni":"University of Stuttgart","ucret":450,"kira":850,"yasam":68.5,"toplam":10650,"pop":13},{"ulke":"Almanya","uni":"TU Hamburg","ucret":500,"kira":950,"yasam":71.2,"toplam":11900,"pop":13},{"ulke":"Almanya","uni":"RWTH Aachen","ucret":500,"kira":700,"yasam":66.4,"toplam":8900,"pop":13},{"ulke":"Almanya","uni":"KIT","ucret":500,"kira":800,"yasam":67.8,"toplam":10100,"pop":13},{"ulke":"Almanya","uni":"TU Darmstadt","ucret":450,"kira":750,"yasam":66.9,"toplam":9450,"pop":13},{"ulke":"Almanya","uni":"TU Braunschweig","ucret":500,"kira":650,"yasam":64.5,"toplam":8300,"pop":13},{"ulke":"Almanya","uni":"University of Jena","ucret":450,"kira":600,"yasam":63.8,"toplam":7650,"pop":13},{"ulke":"Almanya","uni":"Leibniz University","ucret":500,"kira":750,"yasam":66.2,"toplam":9500,"pop":13},{"ulke":"Almanya","uni":"University of Freiburg","ucret":500,"kira":800,"yasam":67.5,"toplam":10100,"pop":13},{"ulke":"ABD","uni":"University of Pennsylvania","ucret":51900,"kira":1900,"yasam":76.8,"toplam":74700,"pop":17},{"ulke":"ABD","uni":"University of Chicago","ucret":52400,"kira":2000,"yasam":78.9,"toplam":76400,"pop":17},{"ulke":"ABD","uni":"Johns Hopkins","ucret":53600,"kira":1700,"yasam":72.5,"toplam":74000,"pop":17},{"ulke":"ABD","uni":"Vanderbilt University","ucret":50800,"kira":1600,"yasam":71.2,"toplam":70000,"pop":17},{"ulke":"ABD","uni":"Duke University","ucret":51500,"kira":1500,"yasam":70.8,"toplam":69500,"pop":17},{"ulke":"ABD","uni":"University of Wisconsin","ucret":38200,"kira":1400,"yasam":69.5,"toplam":55000,"pop":17},{"ulke":"ABD","uni":"Arizona State University","ucret":41200,"kira":1300,"yasam":70.2,"toplam":56800,"pop":17},{"ulke":"ABD","uni":"University of Colorado","ucret":39800,"kira":1600,"yasam":71.5,"toplam":59000,"pop":17},{"ulke":"ABD","uni":"University of Minnesota","ucret":42500,"kira":1500,"yasam":72.8,"toplam":60500,"pop":17},{"ulke":"ABD","uni":"UC Davis","ucret":42800,"kira":1700,"yasam":73.5,"toplam":63200,"pop":17},{"ulke":"İngiltere","uni":"University College London","ucret":39200,"kira":1900,"yasam":76.2,"toplam":62000,"pop":6},{"ulke":"İngiltere","uni":"University of Leeds","ucret":28500,"kira":950,"yasam":65.8,"toplam":39900,"pop":6},{"ulke":"İngiltere","uni":"University of Warwick","ucret":36800,"kira":1000,"yasam":67.2,"toplam":48800,"pop":6},{"ulke":"İngiltere","uni":"University of Sheffield","ucret":27900,"kira":850,"yasam":64.5,"toplam":38100,"pop":6},{"ulke":"İngiltere","uni":"University of Birmingham","ucret":29500,"kira":950,"yasam":66.8,"toplam":40900,"pop":6},{"ulke":"İngiltere","uni":"University of Southampton","ucret":32400,"kira":900,"yasam":65.9,"toplam":43200,"pop":6},{"ulke":"İngiltere","uni":"University of Nottingham","ucret":28900,"kira":850,"yasam":64.8,"toplam":39100,"pop":6},{"ulke":"İngiltere","uni":"Cardiff University","ucret":31200,"kira":800,"yasam":64.2,"toplam":40800,"pop":6},{"ulke":"İngiltere","uni":"Queen's University Belfast","ucret":27500,"kira":750,"yasam":63.5,"toplam":36500,"pop":6},{"ulke":"İngiltere","uni":"Newcastle University","ucret":30800,"kira":800,"yasam":64.6,"toplam":40400,"pop":6},{"ulke":"Kanada","uni":"McMaster University","ucret":32500,"kira":1200,"yasam":68.5,"toplam":46900,"pop":5},{"ulke":"Kanada","uni":"Western University","ucret":29800,"kira":1100,"yasam":65.8,"toplam":43000,"pop":5},{"ulke":"Kanada","uni":"Dalhousie University","ucret":28500,"kira":1200,"yasam":64.5,"toplam":42900,"pop":5},{"ulke":"Kanada","uni":"University of Victoria","ucret":27900,"kira":1300,"yasam":69.2,"toplam":43500,"pop":5},{"ulke":"Kanada","uni":"Laval University","ucret":21500,"kira":900,"yasam":63.8,"toplam":32300,"pop":5},{"ulke":"Kanada","uni":"University of Manitoba","ucret":26800,"kira":950,"yasam":62.5,"toplam":38200,"pop":5},{"ulke":"Kanada","uni":"University of Regina","ucret":25500,"kira":900,"yasam":61.8,"toplam":36300,"pop":5},{"ulke":"Kanada","uni":"Memorial University","ucret":19800,"kira":950,"yasam":63.2,"toplam":31200,"pop":5},{"ulke":"Kanada","uni":"University of Saskatchewan","ucret":24500,"kira":1000,"yasam":62.8,"toplam":36500,"pop":5},{"ulke":"Kanada","uni":"UniversitÃ© de Sherbrooke","ucret":20500,"kira":850,"yasam":61.5,"toplam":30700,"pop":5},{"ulke":"ABD","uni":"Carnegie Mellon","ucret":51200,"kira":1800,"yasam":72.4,"toplam":72800,"pop":17},{"ulke":"ABD","uni":"UIUC","ucret":45800,"kira":1400,"yasam":68.5,"toplam":62600,"pop":17},{"ulke":"Kanada","uni":"University of Calgary","ucret":26500,"kira":1300,"yasam":69.2,"toplam":42100,"pop":5},{"ulke":"Brezilya","uni":"University of Sao Paulo","ucret":0,"kira":600,"yasam":48.5,"toplam":7200,"pop":0},{"ulke":"Türkiye","uni":"Bogazici University","ucret":1800,"kira":450,"yasam":42.8,"toplam":7200,"pop":0},{"ulke":"Rusya","uni":"Moscow State University","ucret":3900,"kira":700,"yasam":51.2,"toplam":12300,"pop":0},{"ulke":"Meksika","uni":"UNAM","ucret":800,"kira":500,"yasam":44.6,"toplam":6800,"pop":0},{"ulke":"Yunanistan","uni":"National Technical University","ucret":2500,"kira":550,"yasam":54.8,"toplam":9100,"pop":0},{"ulke":"Tayland","uni":"Chulalongkorn University","ucret":3800,"kira":450,"yasam":46.5,"toplam":9200,"pop":0},{"ulke":"BAE","uni":"American University in Dubai","ucret":29500,"kira":1200,"yasam":72.4,"toplam":43900,"pop":0},{"ulke":"ABD","uni":"Columbia University","ucret":52800,"kira":2500,"yasam":100.0,"toplam":82800,"pop":17},{"ulke":"ABD","uni":"Cornell University","ucret":49800,"kira":1600,"yasam":70.5,"toplam":69000,"pop":17},{"ulke":"Çin","uni":"SUSTech","ucret":8200,"kira":800,"yasam":58.4,"toplam":17800,"pop":1},{"ulke":"Güney Afrika","uni":"University of Cape Town","ucret":5900,"kira":600,"yasam":49.2,"toplam":13100,"pop":0},{"ulke":"Mısır","uni":"American University in Cairo","ucret":19800,"kira":450,"yasam":38.4,"toplam":25200,"pop":0},{"ulke":"Arjantin","uni":"University of Buenos Aires","ucret":0,"kira":400,"yasam":42.6,"toplam":4800,"pop":0},{"ulke":"Endonezya","uni":"University of Indonesia","ucret":4200,"kira":500,"yasam":45.8,"toplam":10200,"pop":0},{"ulke":"Suudi Arabistan","uni":"King Saud University","ucret":7800,"kira":800,"yasam":52.4,"toplam":17400,"pop":0},{"ulke":"Nijerya","uni":"University of Lagos","ucret":2500,"kira":400,"yasam":40.2,"toplam":7300,"pop":0},{"ulke":"Vietnam","uni":"HCMUT","ucret":3200,"kira":450,"yasam":43.6,"toplam":8600,"pop":0},{"ulke":"Hollanda","uni":"TU Eindhoven","ucret":15600,"kira":950,"yasam":69.8,"toplam":27000,"pop":3},{"ulke":"Hollanda","uni":"University of Twente","ucret":11200,"kira":750,"yasam":65.4,"toplam":20200,"pop":3},{"ulke":"Hollanda","uni":"University of Groningen","ucret":14800,"kira":800,"yasam":66.8,"toplam":24400,"pop":3},{"ulke":"Hollanda","uni":"Maastricht University","ucret":11500,"kira":850,"yasam":67.2,"toplam":21700,"pop":3},{"ulke":"Hollanda","uni":"Radboud University","ucret":14500,"kira":800,"yasam":66.5,"toplam":24100,"pop":3},{"ulke":"Hollanda","uni":"Tilburg University","ucret":11300,"kira":750,"yasam":65.8,"toplam":20300,"pop":3},{"ulke":"Hollanda","uni":"Utrecht University","ucret":15200,"kira":1000,"yasam":70.2,"toplam":27200,"pop":3},{"ulke":"Hollanda","uni":"Leiden University","ucret":11400,"kira":950,"yasam":69.5,"toplam":22800,"pop":3},{"ulke":"Hollanda","uni":"Wageningen University","ucret":14900,"kira":750,"yasam":65.2,"toplam":23900,"pop":3},{"ulke":"Hollanda","uni":"VU Amsterdam","ucret":15400,"kira":1100,"yasam":73.5,"toplam":28600,"pop":3},{"ulke":"Singapur","uni":"Nanyang Technological University","ucret":32500,"kira":1500,"yasam":81.1,"toplam":50500,"pop":2},{"ulke":"Singapur","uni":"Singapore Management University","ucret":31800,"kira":1500,"yasam":81.1,"toplam":49800,"pop":2},{"ulke":"Singapur","uni":"SUTD","ucret":31200,"kira":1500,"yasam":81.1,"toplam":49200,"pop":2},{"ulke":"Singapur","uni":"SIT","ucret":29800,"kira":1500,"yasam":81.1,"toplam":47800,"pop":2},{"ulke":"Singapur","uni":"NUS","ucret":35600,"kira":1500,"yasam":81.1,"toplam":53600,"pop":2},{"ulke":"Singapur","uni":"NTU","ucret":34900,"kira":1500,"yasam":81.1,"toplam":52900,"pop":2},{"ulke":"Singapur","uni":"SUTD","ucret":33800,"kira":1500,"yasam":81.1,"toplam":51800,"pop":2},{"ulke":"Singapur","uni":"SMU","ucret":34200,"kira":1500,"yasam":81.1,"toplam":52200,"pop":2},{"ulke":"Singapur","uni":"NUS","ucret":38500,"kira":1500,"yasam":81.1,"toplam":56500,"pop":2},{"ulke":"Singapur","uni":"NTU","ucret":37900,"kira":1500,"yasam":81.1,"toplam":55900,"pop":2},{"ulke":"Fransa","uni":"Ã‰cole Polytechnique","ucret":15600,"kira":1500,"yasam":74.6,"toplam":33600,"pop":1},{"ulke":"Fransa","uni":"INSA Toulouse","ucret":4200,"kira":750,"yasam":65.8,"toplam":13200,"pop":1},{"ulke":"Fransa","uni":"Ã‰cole Normale SupÃ©rieure Lyon","ucret":4800,"kira":850,"yasam":68.5,"toplam":15000,"pop":1},{"ulke":"Fransa","uni":"Grenoble INP","ucret":4500,"kira":800,"yasam":66.4,"toplam":14100,"pop":1},{"ulke":"Fransa","uni":"UniversitÃ© Nice Sophia Antipolis","ucret":3900,"kira":900,"yasam":69.2,"toplam":14700,"pop":1},{"ulke":"Fransa","uni":"University of Bordeaux","ucret":4200,"kira":850,"yasam":67.8,"toplam":14400,"pop":1},{"ulke":"Fransa","uni":"UniversitÃ© de Lille","ucret":3800,"kira":750,"yasam":65.5,"toplam":12800,"pop":1},{"ulke":"Fransa","uni":"INSA Rennes","ucret":4500,"kira":700,"yasam":64.8,"toplam":12900,"pop":1},{"ulke":"Fransa","uni":"University of Strasbourg","ucret":3900,"kira":800,"yasam":66.2,"toplam":13500,"pop":1},{"ulke":"Fransa","uni":"University of Montpellier","ucret":4100,"kira":750,"yasam":65.9,"toplam":13100,"pop":1},{"ulke":"İsviçre","uni":"EPFL","ucret":1460,"kira":1900,"yasam":89.8,"toplam":24260,"pop":2},{"ulke":"İsviçre","uni":"University of Geneva","ucret":1380,"kira":2000,"yasam":90.5,"toplam":25380,"pop":2},{"ulke":"İsviçre","uni":"University of Bern","ucret":1420,"kira":1700,"yasam":85.4,"toplam":21820,"pop":2},{"ulke":"İsviçre","uni":"University of St. Gallen","ucret":1440,"kira":1600,"yasam":86.2,"toplam":20640,"pop":2},{"ulke":"İsviçre","uni":"USI","ucret":1460,"kira":1500,"yasam":84.5,"toplam":19460,"pop":2},{"ulke":"İsviçre","uni":"University of Fribourg","ucret":1380,"kira":1400,"yasam":83.8,"toplam":18180,"pop":2},{"ulke":"İsviçre","uni":"University of Neuchatel","ucret":1420,"kira":1500,"yasam":84.2,"toplam":19420,"pop":2},{"ulke":"İsviçre","uni":"University of Basel","ucret":1440,"kira":1800,"yasam":87.5,"toplam":23040,"pop":2},{"ulke":"İsviçre","uni":"University of Lucerne","ucret":1380,"kira":1600,"yasam":85.8,"toplam":20580,"pop":2},{"ulke":"İsviçre","uni":"ZHAW","ucret":1460,"kira":1700,"yasam":86.4,"toplam":21860,"pop":2},{"ulke":"Danimarka","uni":"University of Copenhagen","ucret":8800,"kira":1500,"yasam":83.2,"toplam":26800,"pop":2},{"ulke":"Danimarka","uni":"Aarhus University","ucret":8600,"kira":1200,"yasam":77.4,"toplam":23000,"pop":2},{"ulke":"Danimarka","uni":"Aalborg University","ucret":8400,"kira":1000,"yasam":75.1,"toplam":20400,"pop":2},{"ulke":"Çin","uni":"Tsinghua University","ucret":8900,"kira":800,"yasam":51.2,"toplam":18500,"pop":1},{"ulke":"Çin","uni":"Peking University","ucret":8500,"kira":750,"yasam":51.2,"toplam":17500,"pop":1},{"ulke":"Çin","uni":"Fudan University","ucret":7800,"kira":700,"yasam":48.9,"toplam":16200,"pop":1},{"ulke":"Çin","uni":"Shanghai Jiao Tong University","ucret":8200,"kira":720,"yasam":48.9,"toplam":16840,"pop":1},{"ulke":"Çin","uni":"Zhejiang University","ucret":7500,"kira":550,"yasam":45.3,"toplam":14100,"pop":1},{"ulke":"Çin","uni":"Nanjing University","ucret":7200,"kira":500,"yasam":44.1,"toplam":13200,"pop":1},{"ulke":"Çin","uni":"Sun Yat-sen University","ucret":6900,"kira":480,"yasam":43.8,"toplam":12660,"pop":1},{"ulke":"Çin","uni":"Wuhan University","ucret":6500,"kira":450,"yasam":41.2,"toplam":11900,"pop":1},{"ulke":"Çin","uni":"Xi'an Jiaotong University","ucret":6300,"kira":420,"yasam":40.5,"toplam":11340,"pop":1},{"ulke":"Çin","uni":"Sichuan University","ucret":6100,"kira":400,"yasam":39.8,"toplam":10900,"pop":1},{"ulke":"Güney Kore","uni":"Seoul National University","ucret":7200,"kira":950,"yasam":85.1,"toplam":18600,"pop":3},{"ulke":"Güney Kore","uni":"Korea University","ucret":7000,"kira":920,"yasam":85.1,"toplam":18040,"pop":3},{"ulke":"Güney Kore","uni":"Yonsei University","ucret":6900,"kira":900,"yasam":85.1,"toplam":17700,"pop":3},{"ulke":"Güney Kore","uni":"Hanyang University","ucret":6500,"kira":850,"yasam":85.1,"toplam":16700,"pop":3},{"ulke":"Güney Kore","uni":"Sungkyunkwan University","ucret":6400,"kira":840,"yasam":85.1,"toplam":16480,"pop":3},{"ulke":"Güney Kore","uni":"KAIST","ucret":6800,"kira":700,"yasam":75.4,"toplam":15200,"pop":3},{"ulke":"Güney Kore","uni":"Chungnam National University","ucret":5900,"kira":650,"yasam":75.4,"toplam":13700,"pop":3},{"ulke":"Güney Kore","uni":"Pusan National University","ucret":5800,"kira":600,"yasam":73.2,"toplam":13000,"pop":3},{"ulke":"Güney Kore","uni":"Dong-A University","ucret":5600,"kira":580,"yasam":73.2,"toplam":12560,"pop":3},{"ulke":"Güney Kore","uni":"Kyungpook National University","ucret":5500,"kira":550,"yasam":71.8,"toplam":12100,"pop":3},{"ulke":"Güney Kore","uni":"Yeungnam University","ucret":5400,"kira":530,"yasam":71.8,"toplam":11760,"pop":3},{"ulke":"Güney Kore","uni":"Chonnam National University","ucret":5300,"kira":520,"yasam":70.5,"toplam":11540,"pop":3},{"ulke":"Güney Kore","uni":"Chosun University","ucret":5200,"kira":500,"yasam":70.5,"toplam":11200,"pop":3},{"ulke":"Güney Kore","uni":"Ulsan National Institute of Science and Technology","ucret":6100,"kira":580,"yasam":72.3,"toplam":13060,"pop":3},{"ulke":"Güney Kore","uni":"University of Ulsan","ucret":5100,"kira":550,"yasam":72.3,"toplam":11700,"pop":3},{"ulke":"Güney Kore","uni":"POSTECH","ucret":6300,"kira":570,"yasam":71.2,"toplam":13140,"pop":3},{"ulke":"Güney Kore","uni":"Incheon National University","ucret":5000,"kira":600,"yasam":76.4,"toplam":12200,"pop":3},{"ulke":"Güney Kore","uni":"Sungkyunkwan University (Suwon)","ucret":5900,"kira":650,"yasam":77.8,"toplam":13700,"pop":3},{"ulke":"Güney Kore","uni":"Hanbat National University","ucret":4900,"kira":540,"yasam":75.4,"toplam":11380,"pop":3},{"ulke":"Güney Kore","uni":"Chungbuk National University","ucret":4800,"kira":520,"yasam":70.1,"toplam":11040,"pop":3},{"ulke":"ABD","uni":"Stanford University","ucret":57000,"kira":2400,"yasam":95.2,"toplam":85800,"pop":17},{"ulke":"ABD","uni":"MIT","ucret":55800,"kira":2300,"yasam":83.5,"toplam":83400,"pop":17},{"ulke":"ABD","uni":"Yale University","ucret":54500,"kira":2100,"yasam":79.8,"toplam":79700,"pop":17},{"ulke":"ABD","uni":"Princeton University","ucret":54000,"kira":2000,"yasam":81.2,"toplam":78000,"pop":17},{"ulke":"ABD","uni":"University of Pennsylvania","ucret":53500,"kira":1900,"yasam":82.4,"toplam":76300,"pop":17},{"ulke":"ABD","uni":"UCLA","ucret":43000,"kira":2200,"yasam":88.7,"toplam":69400,"pop":17},{"ulke":"ABD","uni":"UC Berkeley","ucret":43500,"kira":2300,"yasam":91.5,"toplam":71100,"pop":17},{"ulke":"ABD","uni":"University of Michigan","ucret":52000,"kira":1700,"yasam":75.4,"toplam":72400,"pop":17},{"ulke":"ABD","uni":"University of Texas Austin","ucret":40500,"kira":1800,"yasam":72.8,"toplam":62100,"pop":17},{"ulke":"ABD","uni":"University of Washington","ucret":39800,"kira":2000,"yasam":85.6,"toplam":63800,"pop":17},{"ulke":"ABD","uni":"University of Wisconsin-Madison","ucret":37500,"kira":1600,"yasam":71.2,"toplam":56700,"pop":17},{"ulke":"ABD","uni":"University of Illinois Urbana-Champaign","ucret":36800,"kira":1500,"yasam":70.5,"toplam":54800,"pop":17},{"ulke":"ABD","uni":"Georgia Tech","ucret":33500,"kira":1700,"yasam":76.8,"toplam":53900,"pop":17},{"ulke":"ABD","uni":"Ohio State University","ucret":32800,"kira":1400,"yasam":71.4,"toplam":49600,"pop":17},{"ulke":"ABD","uni":"Purdue University","ucret":31500,"kira":1300,"yasam":68.9,"toplam":47100,"pop":17},{"ulke":"ABD","uni":"University of Florida","ucret":28500,"kira":1400,"yasam":70.2,"toplam":45300,"pop":17},{"ulke":"ABD","uni":"Arizona State University","ucret":28000,"kira":1500,"yasam":72.5,"toplam":46000,"pop":17},{"ulke":"ABD","uni":"NC State University","ucret":27500,"kira":1400,"yasam":71.8,"toplam":44300,"pop":17},{"ulke":"ABD","uni":"Texas A&M University","ucret":27000,"kira":1300,"yasam":69.5,"toplam":42600,"pop":17},{"ulke":"ABD","uni":"Oregon State University","ucret":26500,"kira":1300,"yasam":70.1,"toplam":42100,"pop":17},{"ulke":"İngiltere","uni":"University of Cambridge","ucret":38500,"kira":1800,"yasam":78.5,"toplam":60100,"pop":6},{"ulke":"İngiltere","uni":"University of Oxford","ucret":37900,"kira":1850,"yasam":77.8,"toplam":60100,"pop":6},{"ulke":"İngiltere","uni":"Imperial College London","ucret":37500,"kira":2200,"yasam":83.2,"toplam":63900,"pop":6},{"ulke":"İngiltere","uni":"University College London","ucret":36800,"kira":2100,"yasam":83.2,"toplam":62000,"pop":6},{"ulke":"İngiltere","uni":"King's College London","ucret":35500,"kira":2000,"yasam":83.2,"toplam":59500,"pop":6},{"ulke":"İngiltere","uni":"University of Edinburgh","ucret":32500,"kira":1600,"yasam":75.4,"toplam":51700,"pop":6},{"ulke":"İngiltere","uni":"University of Manchester","ucret":31800,"kira":1400,"yasam":72.1,"toplam":48600,"pop":6},{"ulke":"İngiltere","uni":"University of Bristol","ucret":31500,"kira":1500,"yasam":74.8,"toplam":49500,"pop":6},{"ulke":"İngiltere","uni":"University of Warwick","ucret":31200,"kira":1300,"yasam":71.5,"toplam":46800,"pop":6},{"ulke":"İngiltere","uni":"University of Glasgow","ucret":30800,"kira":1400,"yasam":73.2,"toplam":47600,"pop":6},{"ulke":"İngiltere","uni":"University of Birmingham","ucret":30500,"kira":1300,"yasam":71.8,"toplam":46100,"pop":6},{"ulke":"İngiltere","uni":"University of Leeds","ucret":30200,"kira":1250,"yasam":71.2,"toplam":45200,"pop":6},{"ulke":"İngiltere","uni":"University of Sheffield","ucret":29800,"kira":1200,"yasam":70.5,"toplam":44200,"pop":6},{"ulke":"İngiltere","uni":"University of Nottingham","ucret":29500,"kira":1150,"yasam":70.8,"toplam":43300,"pop":6},{"ulke":"İngiltere","uni":"University of Southampton","ucret":29200,"kira":1300,"yasam":72.4,"toplam":44800,"pop":6},{"ulke":"İngiltere","uni":"Durham University","ucret":28900,"kira":1250,"yasam":71.6,"toplam":43900,"pop":6},{"ulke":"İngiltere","uni":"University of Liverpool","ucret":28600,"kira":1100,"yasam":70.2,"toplam":41800,"pop":6},{"ulke":"İngiltere","uni":"Cardiff University","ucret":28300,"kira":1050,"yasam":69.8,"toplam":40900,"pop":6},{"ulke":"İngiltere","uni":"Newcastle University","ucret":28000,"kira":1100,"yasam":70.1,"toplam":41200,"pop":6},{"ulke":"İngiltere","uni":"University of Aberdeen","ucret":27700,"kira":1000,"yasam":69.5,"toplam":39700,"pop":6},{"ulke":"İngiltere","uni":"University of Leicester","ucret":27400,"kira":950,"yasam":68.9,"toplam":38800,"pop":6},{"ulke":"İngiltere","uni":"University of Reading","ucret":27100,"kira":1150,"yasam":71.2,"toplam":40900,"pop":6},{"ulke":"İngiltere","uni":"University of Sussex","ucret":26800,"kira":1200,"yasam":72.5,"toplam":41200,"pop":6},{"ulke":"İngiltere","uni":"University of Essex","ucret":26500,"kira":1000,"yasam":69.8,"toplam":38500,"pop":6},{"ulke":"İngiltere","uni":"University of Bath","ucret":26200,"kira":1250,"yasam":73.4,"toplam":41200,"pop":6},{"ulke":"İngiltere","uni":"University of Surrey","ucret":25900,"kira":1150,"yasam":71.8,"toplam":39700,"pop":6},{"ulke":"İngiltere","uni":"University of Exeter","ucret":25600,"kira":1200,"yasam":72.1,"toplam":40000,"pop":6},{"ulke":"İngiltere","uni":"University of Kent","ucret":25300,"kira":1100,"yasam":70.5,"toplam":38500,"pop":6},{"ulke":"İngiltere","uni":"University of Dundee","ucret":25000,"kira":950,"yasam":68.9,"toplam":36400,"pop":6},{"ulke":"İngiltere","uni":"University of Strathclyde","ucret":24700,"kira":1000,"yasam":69.2,"toplam":36700,"pop":6},{"ulke":"İngiltere","uni":"Heriot-Watt University","ucret":24400,"kira":1050,"yasam":69.5,"toplam":37000,"pop":6},{"ulke":"İngiltere","uni":"Loughborough University","ucret":24100,"kira":900,"yasam":68.5,"toplam":34900,"pop":6},{"ulke":"İngiltere","uni":"Brunel University London","ucret":23800,"kira":1800,"yasam":83.2,"toplam":45400,"pop":6},{"ulke":"İngiltere","uni":"Queen Mary University of London","ucret":23500,"kira":1900,"yasam":83.2,"toplam":46300,"pop":6},{"ulke":"İngiltere","uni":"Royal Holloway University","ucret":23200,"kira":1400,"yasam":75.5,"toplam":40000,"pop":6},{"ulke":"İngiltere","uni":"Lancaster University","ucret":22900,"kira":1000,"yasam":69.8,"toplam":34900,"pop":6},{"ulke":"İngiltere","uni":"Swansea University","ucret":22600,"kira":950,"yasam":68.5,"toplam":34000,"pop":6},{"ulke":"İngiltere","uni":"Aston University","ucret":22300,"kira":1200,"yasam":71.8,"toplam":36700,"pop":6},{"ulke":"İngiltere","uni":"University of Hull","ucret":22000,"kira":850,"yasam":67.9,"toplam":32200,"pop":6},{"ulke":"İngiltere","uni":"Keele University","ucret":21700,"kira":800,"yasam":67.5,"toplam":31300,"pop":6},{"ulke":"İngiltere","uni":"University of Plymouth","ucret":21400,"kira":950,"yasam":69.2,"toplam":32800,"pop":6},{"ulke":"İngiltere","uni":"University of Portsmouth","ucret":21100,"kira":1000,"yasam":70.5,"toplam":33100,"pop":6},{"ulke":"İngiltere","uni":"Ulster University","ucret":20800,"kira":800,"yasam":67.2,"toplam":30400,"pop":6},{"ulke":"İngiltere","uni":"Northumbria University","ucret":20500,"kira":900,"yasam":68.5,"toplam":31300,"pop":6},{"ulke":"İngiltere","uni":"Coventry University","ucret":20200,"kira":950,"yasam":69.8,"toplam":31600,"pop":6},{"ulke":"İngiltere","uni":"Oxford Brookes University","ucret":19900,"kira":1500,"yasam":77.8,"toplam":37900,"pop":6},{"ulke":"İngiltere","uni":"De Montfort University","ucret":19600,"kira":900,"yasam":68.9,"toplam":30400,"pop":6},{"ulke":"İngiltere","uni":"University of Westminster","ucret":19300,"kira":1800,"yasam":83.2,"toplam":40900,"pop":6},{"ulke":"İngiltere","uni":"University of Greenwich","ucret":19000,"kira":1700,"yasam":83.2,"toplam":39400,"pop":6},{"ulke":"İngiltere","uni":"Kingston University","ucret":18700,"kira":1600,"yasam":83.2,"toplam":37900,"pop":6},{"ulke":"Kanada","uni":"University of Toronto","ucret":45200,"kira":1800,"yasam":73.5,"toplam":66800,"pop":5},{"ulke":"Kanada","uni":"University of Toronto","ucret":28500,"kira":1800,"yasam":73.5,"toplam":50100,"pop":5},{"ulke":"Kanada","uni":"University of British Columbia","ucret":43800,"kira":1900,"yasam":71.2,"toplam":66600,"pop":5},{"ulke":"Kanada","uni":"University of British Columbia","ucret":27900,"kira":1900,"yasam":71.2,"toplam":50700,"pop":5},{"ulke":"Kanada","uni":"McGill University","ucret":41500,"kira":1500,"yasam":65.8,"toplam":59500,"pop":5},{"ulke":"Kanada","uni":"McGill University","ucret":26800,"kira":1500,"yasam":65.8,"toplam":44800,"pop":5},{"ulke":"Kanada","uni":"University of Waterloo","ucret":40900,"kira":1300,"yasam":62.4,"toplam":56500,"pop":5},{"ulke":"Kanada","uni":"University of Waterloo","ucret":26200,"kira":1300,"yasam":62.4,"toplam":41800,"pop":5},{"ulke":"Kanada","uni":"University of Montreal","ucret":39500,"kira":1400,"yasam":65.8,"toplam":56300,"pop":5},{"ulke":"Kanada","uni":"University of Montreal","ucret":25800,"kira":1400,"yasam":65.8,"toplam":42600,"pop":5},{"ulke":"Kanada","uni":"University of Alberta","ucret":38200,"kira":1200,"yasam":61.9,"toplam":52600,"pop":5},{"ulke":"Kanada","uni":"University of Alberta","ucret":24900,"kira":1200,"yasam":61.9,"toplam":39300,"pop":5},{"ulke":"Kanada","uni":"University of Ottawa","ucret":37800,"kira":1400,"yasam":63.5,"toplam":54600,"pop":5},{"ulke":"Kanada","uni":"University of Ottawa","ucret":24500,"kira":1400,"yasam":63.5,"toplam":41300,"pop":5},{"ulke":"Kanada","uni":"University of Calgary","ucret":37200,"kira":1300,"yasam":62.8,"toplam":52800,"pop":5},{"ulke":"Kanada","uni":"University of Calgary","ucret":24100,"kira":1300,"yasam":62.8,"toplam":39700,"pop":5},{"ulke":"Kanada","uni":"McMaster University","ucret":36500,"kira":1250,"yasam":64.2,"toplam":51500,"pop":5},{"ulke":"Kanada","uni":"McMaster University","ucret":23800,"kira":1250,"yasam":64.2,"toplam":38800,"pop":5},{"ulke":"Kanada","uni":"Western University","ucret":35900,"kira":1200,"yasam":61.5,"toplam":50300,"pop":5},{"ulke":"Kanada","uni":"Western University","ucret":23500,"kira":1200,"yasam":61.5,"toplam":37900,"pop":5},{"ulke":"Kanada","uni":"Queen's University","ucret":35400,"kira":1300,"yasam":62.1,"toplam":51000,"pop":5},{"ulke":"Kanada","uni":"Queen's University","ucret":23200,"kira":1300,"yasam":62.1,"toplam":38800,"pop":5},{"ulke":"Kanada","uni":"University of Victoria","ucret":34800,"kira":1400,"yasam":64.8,"toplam":51600,"pop":5},{"ulke":"Kanada","uni":"University of Victoria","ucret":22900,"kira":1400,"yasam":64.8,"toplam":39700,"pop":5},{"ulke":"Kanada","uni":"Dalhousie University","ucret":34200,"kira":1200,"yasam":61.2,"toplam":48600,"pop":5},{"ulke":"Kanada","uni":"Dalhousie University","ucret":22600,"kira":1200,"yasam":61.2,"toplam":37000,"pop":5},{"ulke":"Kanada","uni":"University of Manitoba","ucret":33600,"kira":1100,"yasam":59.8,"toplam":46800,"pop":5},{"ulke":"Kanada","uni":"University of Manitoba","ucret":22300,"kira":1100,"yasam":59.8,"toplam":35500,"pop":5},{"ulke":"Kanada","uni":"Laval University","ucret":33000,"kira":1000,"yasam":58.5,"toplam":45000,"pop":5},{"ulke":"Kanada","uni":"Laval University","ucret":22000,"kira":1000,"yasam":58.5,"toplam":34000,"pop":5},{"ulke":"Kanada","uni":"University of Saskatchewan","ucret":32400,"kira":950,"yasam":58.2,"toplam":43800,"pop":5},{"ulke":"Kanada","uni":"University of Saskatchewan","ucret":21700,"kira":950,"yasam":58.2,"toplam":33100,"pop":5},{"ulke":"Kanada","uni":"Memorial University","ucret":31800,"kira":900,"yasam":57.9,"toplam":42600,"pop":5},{"ulke":"Kanada","uni":"Memorial University","ucret":21400,"kira":900,"yasam":57.9,"toplam":32200,"pop":5},{"ulke":"Kanada","uni":"University of Regina","ucret":31200,"kira":900,"yasam":57.5,"toplam":42000,"pop":5},{"ulke":"Kanada","uni":"University of Regina","ucret":21100,"kira":900,"yasam":57.5,"toplam":31900,"pop":5},{"ulke":"Kanada","uni":"University of Sherbrooke","ucret":30600,"kira":850,"yasam":56.8,"toplam":40800,"pop":5},{"ulke":"Kanada","uni":"University of Sherbrooke","ucret":20800,"kira":850,"yasam":56.8,"toplam":31000,"pop":5},{"ulke":"Kanada","uni":"University of Windsor","ucret":30000,"kira":950,"yasam":58.9,"toplam":41400,"pop":5},{"ulke":"Kanada","uni":"University of Windsor","ucret":20500,"kira":950,"yasam":58.9,"toplam":31900,"pop":5},{"ulke":"Kanada","uni":"University of New Brunswick","ucret":29400,"kira":900,"yasam":57.2,"toplam":40200,"pop":5},{"ulke":"Kanada","uni":"University of New Brunswick","ucret":20200,"kira":900,"yasam":57.2,"toplam":31000,"pop":5},{"ulke":"Kanada","uni":"UQTR","ucret":28800,"kira":850,"yasam":56.5,"toplam":39000,"pop":5},{"ulke":"Kanada","uni":"UQTR","ucret":19900,"kira":850,"yasam":56.5,"toplam":30100,"pop":5},{"ulke":"Kanada","uni":"Lakehead University","ucret":28200,"kira":800,"yasam":56.2,"toplam":37800,"pop":5},{"ulke":"Kanada","uni":"Lakehead University","ucret":19600,"kira":800,"yasam":56.2,"toplam":29200,"pop":5},{"ulke":"Kanada","uni":"Laurentian University","ucret":27600,"kira":800,"yasam":55.8,"toplam":37200,"pop":5},{"ulke":"Kanada","uni":"Laurentian University","ucret":19300,"kira":800,"yasam":55.8,"toplam":28900,"pop":5},{"ulke":"Kanada","uni":"UNBC","ucret":27000,"kira":750,"yasam":55.5,"toplam":36000,"pop":5},{"ulke":"Kanada","uni":"UNBC","ucret":19000,"kira":750,"yasam":55.5,"toplam":28000,"pop":5},{"ulke":"Avustralya","uni":"University of Melbourne","ucret":42500,"kira":1800,"yasam":72.8,"toplam":64100,"pop":13},{"ulke":"Avustralya","uni":"University of Melbourne","ucret":45800,"kira":1800,"yasam":72.8,"toplam":67400,"pop":13},{"ulke":"Avustralya","uni":"University of Melbourne","ucret":35000,"kira":1800,"yasam":72.8,"toplam":56600,"pop":13},{"ulke":"Avustralya","uni":"University of Sydney","ucret":41800,"kira":2000,"yasam":74.5,"toplam":65800,"pop":13},{"ulke":"Avustralya","uni":"University of Sydney","ucret":44900,"kira":2000,"yasam":74.5,"toplam":68900,"pop":13},{"ulke":"Avustralya","uni":"University of Sydney","ucret":34500,"kira":2000,"yasam":74.5,"toplam":58500,"pop":13},{"ulke":"Avustralya","uni":"Australian National University","ucret":41200,"kira":1600,"yasam":68.9,"toplam":60400,"pop":13},{"ulke":"Avustralya","uni":"Australian National University","ucret":44200,"kira":1600,"yasam":68.9,"toplam":63400,"pop":13},{"ulke":"Avustralya","uni":"Australian National University","ucret":34000,"kira":1600,"yasam":68.9,"toplam":53200,"pop":13},{"ulke":"Avustralya","uni":"University of Queensland","ucret":40500,"kira":1500,"yasam":69.2,"toplam":58500,"pop":13},{"ulke":"Avustralya","uni":"University of Queensland","ucret":43500,"kira":1500,"yasam":69.2,"toplam":61500,"pop":13},{"ulke":"Avustralya","uni":"University of Queensland","ucret":33500,"kira":1500,"yasam":69.2,"toplam":51500,"pop":13},{"ulke":"Avustralya","uni":"University of New South Wales","ucret":40200,"kira":1900,"yasam":74.5,"toplam":63000,"pop":13},{"ulke":"Avustralya","uni":"University of New South Wales","ucret":43200,"kira":1900,"yasam":74.5,"toplam":66000,"pop":13},{"ulke":"Avustralya","uni":"University of New South Wales","ucret":33200,"kira":1900,"yasam":74.5,"toplam":56000,"pop":13},{"ulke":"Avustralya","uni":"Monash University","ucret":39800,"kira":1700,"yasam":72.8,"toplam":60200,"pop":13},{"ulke":"Avustralya","uni":"Monash University","ucret":42800,"kira":1700,"yasam":72.8,"toplam":63200,"pop":13},{"ulke":"Avustralya","uni":"Monash University","ucret":32800,"kira":1700,"yasam":72.8,"toplam":53200,"pop":13},{"ulke":"Avustralya","uni":"University of Adelaide","ucret":39200,"kira":1400,"yasam":67.5,"toplam":56000,"pop":13},{"ulke":"Avustralya","uni":"University of Adelaide","ucret":42200,"kira":1400,"yasam":67.5,"toplam":59000,"pop":13},{"ulke":"Avustralya","uni":"University of Adelaide","ucret":32200,"kira":1400,"yasam":67.5,"toplam":49000,"pop":13},{"ulke":"Avustralya","uni":"University of Western Australia","ucret":38800,"kira":1500,"yasam":68.2,"toplam":56800,"pop":13},{"ulke":"Avustralya","uni":"University of Western Australia","ucret":41800,"kira":1500,"yasam":68.2,"toplam":59800,"pop":13},{"ulke":"Avustralya","uni":"University of Western Australia","ucret":31800,"kira":1500,"yasam":68.2,"toplam":49800,"pop":13},{"ulke":"Avustralya","uni":"Queensland University of Technology","ucret":38200,"kira":1400,"yasam":69.2,"toplam":55000,"pop":13},{"ulke":"Avustralya","uni":"Queensland University of Technology","ucret":41200,"kira":1400,"yasam":69.2,"toplam":58000,"pop":13},{"ulke":"Avustralya","uni":"Queensland University of Technology","ucret":31200,"kira":1400,"yasam":69.2,"toplam":48000,"pop":13},{"ulke":"Avustralya","uni":"University of Technology Sydney","ucret":37800,"kira":1800,"yasam":74.5,"toplam":59400,"pop":13},{"ulke":"Avustralya","uni":"University of Technology Sydney","ucret":40800,"kira":1800,"yasam":74.5,"toplam":62400,"pop":13},{"ulke":"Avustralya","uni":"University of Technology Sydney","ucret":30800,"kira":1800,"yasam":74.5,"toplam":52400,"pop":13},{"ulke":"Avustralya","uni":"RMIT University","ucret":37200,"kira":1600,"yasam":72.8,"toplam":56400,"pop":13},{"ulke":"Avustralya","uni":"RMIT University","ucret":40200,"kira":1600,"yasam":72.8,"toplam":59400,"pop":13},{"ulke":"Avustralya","uni":"RMIT University","ucret":30200,"kira":1600,"yasam":72.8,"toplam":49400,"pop":13},{"ulke":"Avustralya","uni":"University of Wollongong","ucret":36800,"kira":1300,"yasam":65.8,"toplam":52400,"pop":13},{"ulke":"Avustralya","uni":"University of Wollongong","ucret":39800,"kira":1300,"yasam":65.8,"toplam":55400,"pop":13},{"ulke":"Avustralya","uni":"University of Wollongong","ucret":29800,"kira":1300,"yasam":65.8,"toplam":45400,"pop":13},{"ulke":"Avustralya","uni":"University of Newcastle","ucret":36200,"kira":1300,"yasam":66.2,"toplam":51800,"pop":13},{"ulke":"Avustralya","uni":"University of Newcastle","ucret":39200,"kira":1300,"yasam":66.2,"toplam":54800,"pop":13},{"ulke":"Avustralya","uni":"University of Newcastle","ucret":29200,"kira":1300,"yasam":66.2,"toplam":44800,"pop":13},{"ulke":"Avustralya","uni":"University of Tasmania","ucret":35800,"kira":1200,"yasam":64.5,"toplam":50200,"pop":13},{"ulke":"Avustralya","uni":"University of Tasmania","ucret":38800,"kira":1200,"yasam":64.5,"toplam":53200,"pop":13},{"ulke":"Avustralya","uni":"University of Tasmania","ucret":28800,"kira":1200,"yasam":64.5,"toplam":43200,"pop":13},{"ulke":"Avustralya","uni":"Griffith University","ucret":35200,"kira":1400,"yasam":68.5,"toplam":52000,"pop":13},{"ulke":"Avustralya","uni":"Griffith University","ucret":38200,"kira":1400,"yasam":68.5,"toplam":55000,"pop":13},{"ulke":"Avustralya","uni":"Griffith University","ucret":28200,"kira":1400,"yasam":68.5,"toplam":45000,"pop":13},{"ulke":"Avustralya","uni":"University of Canberra","ucret":34800,"kira":1500,"yasam":68.9,"toplam":52800,"pop":13},{"ulke":"Avustralya","uni":"University of Canberra","ucret":37800,"kira":1500,"yasam":68.9,"toplam":55800,"pop":13},{"ulke":"Avustralya","uni":"University of Canberra","ucret":27800,"kira":1500,"yasam":68.9,"toplam":45800,"pop":13},{"ulke":"Avustralya","uni":"James Cook University","ucret":34200,"kira":1200,"yasam":65.2,"toplam":48600,"pop":13},{"ulke":"Avustralya","uni":"James Cook University","ucret":37200,"kira":1200,"yasam":65.2,"toplam":51600,"pop":13},{"ulke":"Avustralya","uni":"James Cook University","ucret":27200,"kira":1200,"yasam":65.2,"toplam":41600,"pop":13},{"ulke":"Avustralya","uni":"University of New England","ucret":33800,"kira":1100,"yasam":63.8,"toplam":47000,"pop":13},{"ulke":"Avustralya","uni":"University of New England","ucret":36800,"kira":1100,"yasam":63.8,"toplam":50000,"pop":13},{"ulke":"Avustralya","uni":"University of New England","ucret":26800,"kira":1100,"yasam":63.8,"toplam":40000,"pop":13},{"ulke":"Avustralya","uni":"University of Southern Queensland","ucret":33200,"kira":1100,"yasam":64.2,"toplam":46400,"pop":13},{"ulke":"Avustralya","uni":"University of Southern Queensland","ucret":36200,"kira":1100,"yasam":64.2,"toplam":49400,"pop":13},{"ulke":"Avustralya","uni":"University of Southern Queensland","ucret":26200,"kira":1100,"yasam":64.2,"toplam":39400,"pop":13},{"ulke":"Avustralya","uni":"Federation University","ucret":32800,"kira":1000,"yasam":63.5,"toplam":44800,"pop":13},{"ulke":"Avustralya","uni":"Federation University","ucret":35800,"kira":1000,"yasam":63.5,"toplam":47800,"pop":13},{"ulke":"Avustralya","uni":"Federation University","ucret":25800,"kira":1000,"yasam":63.5,"toplam":37800,"pop":13},{"ulke":"Avustralya","uni":"Southern Cross University","ucret":32200,"kira":1000,"yasam":63.2,"toplam":44200,"pop":13},{"ulke":"Avustralya","uni":"Southern Cross University","ucret":35200,"kira":1000,"yasam":63.2,"toplam":47200,"pop":13},{"ulke":"Avustralya","uni":"Southern Cross University","ucret":25200,"kira":1000,"yasam":63.2,"toplam":37200,"pop":13},{"ulke":"ABD","uni":"MIT","ucret":58000,"kira":2100,"yasam":82.1,"toplam":83200,"pop":17},{"ulke":"İngiltere","uni":"Imperial College London","ucret":42000,"kira":1800,"yasam":75.3,"toplam":63600,"pop":6},{"ulke":"Almanya","uni":"TU Munich","ucret":0,"kira":1200,"yasam":71.5,"toplam":14400,"pop":13},{"ulke":"Kanada","uni":"University of Toronto","ucret":45000,"kira":1700,"yasam":73.8,"toplam":65400,"pop":5},{"ulke":"Avustralya","uni":"University of Melbourne","ucret":29000,"kira":1500,"yasam":72.4,"toplam":47000,"pop":13},{"ulke":"ABD","uni":"Stanford University","ucret":52000,"kira":2300,"yasam":84.3,"toplam":79600,"pop":17},{"ulke":"İngiltere","uni":"University of Edinburgh","ucret":38000,"kira":1100,"yasam":67.8,"toplam":51200,"pop":6},{"ulke":"Almanya","uni":"Humboldt University","ucret":0,"kira":950,"yasam":68.9,"toplam":11400,"pop":13},{"ulke":"Kanada","uni":"University of British Columbia","ucret":42000,"kira":1600,"yasam":71.2,"toplam":61200,"pop":5},{"ulke":"Avustralya","uni":"University of Sydney","ucret":31000,"kira":1700,"yasam":75.6,"toplam":51400,"pop":13},{"ulke":"ABD","uni":"UC Berkeley","ucret":54000,"kira":2000,"yasam":83.2,"toplam":78000,"pop":17},{"ulke":"İngiltere","uni":"University of Manchester","ucret":35000,"kira":900,"yasam":65.4,"toplam":45800,"pop":6},{"ulke":"Almanya","uni":"University of Hamburg","ucret":0,"kira":1100,"yasam":69.8,"toplam":13200,"pop":13},{"ulke":"Kanada","uni":"McGill University","ucret":38000,"kira":1400,"yasam":68.9,"toplam":54800,"pop":5},{"ulke":"Avustralya","uni":"University of Queensland","ucret":32000,"kira":1200,"yasam":68.7,"toplam":46400,"pop":13},{"ulke":"ABD","uni":"Columbia University","ucret":62000,"kira":2500,"yasam":100.0,"toplam":92000,"pop":17},{"ulke":"İngiltere","uni":"University of Oxford","ucret":40000,"kira":1400,"yasam":71.5,"toplam":56800,"pop":6},{"ulke":"Almanya","uni":"TU Dresden","ucret":0,"kira":800,"yasam":65.4,"toplam":9600,"pop":13},{"ulke":"Kanada","uni":"University of Ottawa","ucret":40000,"kira":1300,"yasam":67.8,"toplam":55600,"pop":5},{"ulke":"Avustralya","uni":"University of Western Australia","ucret":30000,"kira":1100,"yasam":67.2,"toplam":43200,"pop":13},{"ulke":"ABD","uni":"Georgia Tech","ucret":48000,"kira":1700,"yasam":71.2,"toplam":68400,"pop":17},{"ulke":"İngiltere","uni":"University of Bristol","ucret":36000,"kira":1200,"yasam":68.9,"toplam":50400,"pop":6},{"ulke":"Almanya","uni":"Goethe University","ucret":0,"kira":1300,"yasam":72.3,"toplam":15600,"pop":13},{"ulke":"Kanada","uni":"University of Calgary","ucret":35000,"kira":1200,"yasam":65.4,"toplam":49400,"pop":5},{"ulke":"Avustralya","uni":"University of Adelaide","ucret":28000,"kira":1000,"yasam":64.5,"toplam":40000,"pop":13},{"ulke":"ABD","uni":"UCLA","ucret":52000,"kira":2200,"yasam":79.8,"toplam":78400,"pop":17},{"ulke":"İngiltere","uni":"University of Glasgow","ucret":34000,"kira":950,"yasam":64.5,"toplam":45400,"pop":6},{"ulke":"Almanya","uni":"University of Stuttgart","ucret":0,"kira":1100,"yasam":68.7,"toplam":13200,"pop":13},{"ulke":"Kanada","uni":"University of Alberta","ucret":37000,"kira":1100,"yasam":64.3,"toplam":50200,"pop":5},{"ulke":"Avustralya","uni":"Australian National University","ucret":33000,"kira":1300,"yasam":69.8,"toplam":48600,"pop":13},{"ulke":"ABD","uni":"UT Austin","ucret":45000,"kira":1600,"yasam":68.9,"toplam":64200,"pop":17},{"ulke":"İngiltere","uni":"University of Leeds","ucret":35000,"kira":900,"yasam":63.2,"toplam":45800,"pop":6},{"ulke":"Almanya","uni":"Heidelberg University","ucret":0,"kira":1000,"yasam":67.8,"toplam":12000,"pop":13},{"ulke":"Kanada","uni":"Dalhousie University","ucret":36000,"kira":1000,"yasam":63.4,"toplam":48000,"pop":5},{"ulke":"Avustralya","uni":"Griffith University","ucret":29000,"kira":1100,"yasam":65.4,"toplam":42200,"pop":13},{"ulke":"ABD","uni":"University of Washington","ucret":50000,"kira":2000,"yasam":77.8,"toplam":74000,"pop":17},{"ulke":"İngiltere","uni":"University of Sheffield","ucret":33000,"kira":850,"yasam":62.3,"toplam":43200,"pop":6},{"ulke":"Almanya","uni":"University of Cologne","ucret":0,"kira":1200,"yasam":69.8,"toplam":14400,"pop":13},{"ulke":"Kanada","uni":"Laval University","ucret":34000,"kira":900,"yasam":62.1,"toplam":44800,"pop":5},{"ulke":"Avustralya","uni":"University of Newcastle","ucret":27000,"kira":950,"yasam":63.2,"toplam":38400,"pop":13},{"ulke":"ABD","uni":"Carnegie Mellon","ucret":56000,"kira":1500,"yasam":65.4,"toplam":74000,"pop":17},{"ulke":"İngiltere","uni":"University of Nottingham","ucret":34000,"kira":800,"yasam":61.2,"toplam":43600,"pop":6},{"ulke":"Almanya","uni":"University of Bonn","ucret":0,"kira":1100,"yasam":67.8,"toplam":13200,"pop":13},{"ulke":"Kanada","uni":"University of Victoria","ucret":35000,"kira":1100,"yasam":64.5,"toplam":48200,"pop":5},{"ulke":"Avustralya","uni":"University of Tasmania","ucret":26000,"kira":900,"yasam":62.1,"toplam":36800,"pop":13},{"ulke":"ABD","uni":"UC San Diego","ucret":49000,"kira":1900,"yasam":75.6,"toplam":71800,"pop":17},{"ulke":"İngiltere","uni":"Durham University","ucret":35000,"kira":900,"yasam":63.4,"toplam":45800,"pop":6},{"ulke":"Almanya","uni":"RWTH Aachen","ucret":0,"kira":1000,"yasam":68.9,"toplam":12000,"pop":13},{"ulke":"Kanada","uni":"University of Manitoba","ucret":33000,"kira":900,"yasam":61.2,"toplam":43800,"pop":5},{"ulke":"Avustralya","uni":"University of Wollongong","ucret":28000,"kira":950,"yasam":63.4,"toplam":39400,"pop":13},{"ulke":"ABD","uni":"UC Berkeley Extension","ucret":52000,"kira":2400,"yasam":95.2,"toplam":80800,"pop":17},{"ulke":"İngiltere","uni":"King's College London","ucret":39000,"kira":1900,"yasam":75.3,"toplam":61800,"pop":6},{"ulke":"İsviçre","uni":"ETH Zurich","ucret":1500,"kira":2000,"yasam":122.4,"toplam":25500,"pop":2},{"ulke":"Fransa","uni":"Sorbonne University","ucret":4500,"kira":1800,"yasam":84.3,"toplam":26100,"pop":1},{"ulke":"İrlanda","uni":"Trinity College Dublin","ucret":18900,"kira":1700,"yasam":83.6,"toplam":39300,"pop":2},{"ulke":"ABD","uni":"University of Chicago","ucret":58000,"kira":1900,"yasam":84.1,"toplam":80800,"pop":17},{"ulke":"İngiltere","uni":"Anglia Ruskin University","ucret":35000,"kira":1500,"yasam":71.2,"toplam":53000,"pop":6},{"ulke":"İsviçre","uni":"EPFL","ucret":1500,"kira":1900,"yasam":119.8,"toplam":24300,"pop":2},{"ulke":"Fransa","uni":"University of Lyon","ucret":4200,"kira":1200,"yasam":75.6,"toplam":18600,"pop":1},{"ulke":"İrlanda","uni":"University College Cork","ucret":16800,"kira":1300,"yasam":75.4,"toplam":32400,"pop":2},{"ulke":"ABD","uni":"Northeastern University","ucret":54000,"kira":2200,"yasam":82.1,"toplam":80400,"pop":17},{"ulke":"İngiltere","uni":"Heriot-Watt University","ucret":37000,"kira":1200,"yasam":67.8,"toplam":51400,"pop":6},{"ulke":"İsviçre","uni":"University of Geneva","ucret":1500,"kira":1800,"yasam":116.5,"toplam":23100,"pop":2},{"ulke":"Fransa","uni":"University of Toulouse","ucret":4000,"kira":900,"yasam":71.2,"toplam":14800,"pop":1},{"ulke":"İrlanda","uni":"NUI Galway","ucret":15900,"kira":1100,"yasam":72.3,"toplam":29100,"pop":2},{"ulke":"ABD","uni":"University of Washington","ucret":51000,"kira":2100,"yasam":77.8,"toplam":76200,"pop":17},{"ulke":"İngiltere","uni":"University of Birmingham","ucret":36000,"kira":1100,"yasam":65.4,"toplam":49200,"pop":6},{"ulke":"İsviçre","uni":"University of Basel","ucret":1500,"kira":1700,"yasam":114.3,"toplam":21900,"pop":2},{"ulke":"Fransa","uni":"University of Bordeaux","ucret":4300,"kira":1000,"yasam":72.1,"toplam":16300,"pop":1},{"ulke":"İrlanda","uni":"University of Limerick","ucret":15400,"kira":1000,"yasam":71.2,"toplam":27400,"pop":2},{"ulke":"ABD","uni":"UT Austin","ucret":49000,"kira":1800,"yasam":68.9,"toplam":70600,"pop":17},{"ulke":"İngiltere","uni":"University of Salford","ucret":35000,"kira":1000,"yasam":65.4,"toplam":47000,"pop":6},{"ulke":"İsviçre","uni":"University of St. Gallen","ucret":1500,"kira":1600,"yasam":112.1,"toplam":20700,"pop":2},{"ulke":"Fransa","uni":"University of Nice","ucret":4100,"kira":1300,"yasam":76.5,"toplam":19700,"pop":1},{"ulke":"İrlanda","uni":"Maynooth University","ucret":14900,"kira":950,"yasam":70.1,"toplam":26300,"pop":2},{"ulke":"ABD","uni":"University of Denver","ucret":47000,"kira":1700,"yasam":69.8,"toplam":67400,"pop":17},{"ulke":"İngiltere","uni":"Leeds Beckett University","ucret":34000,"kira":900,"yasam":63.2,"toplam":44800,"pop":6},{"ulke":"İsviçre","uni":"University of Bern","ucret":1500,"kira":1500,"yasam":110.4,"toplam":19500,"pop":2},{"ulke":"Fransa","uni":"University of Lille","ucret":4200,"kira":950,"yasam":69.8,"toplam":15600,"pop":1},{"ulke":"İrlanda","uni":"Waterford IT","ucret":14500,"kira":900,"yasam":68.9,"toplam":25300,"pop":2},{"ulke":"ABD","uni":"Portland State University","ucret":45000,"kira":1600,"yasam":71.2,"toplam":64200,"pop":17},{"ulke":"İngiltere","uni":"UWE Bristol","ucret":33000,"kira":1100,"yasam":68.9,"toplam":46200,"pop":6},{"ulke":"İsviçre","uni":"USI Lugano","ucret":1500,"kira":1400,"yasam":108.9,"toplam":18300,"pop":2},{"ulke":"Fransa","uni":"University of Strasbourg","ucret":4000,"kira":1000,"yasam":70.2,"toplam":16000,"pop":1},{"ulke":"İrlanda","uni":"IT Sligo","ucret":14000,"kira":850,"yasam":67.5,"toplam":24200,"pop":2},{"ulke":"ABD","uni":"University of Minnesota","ucret":48000,"kira":1700,"yasam":72.3,"toplam":68400,"pop":17},{"ulke":"İngiltere","uni":"Cardiff University","ucret":34000,"kira":950,"yasam":64.5,"toplam":45400,"pop":6},{"ulke":"İsviçre","uni":"University of Fribourg","ucret":1500,"kira":1300,"yasam":107.8,"toplam":17100,"pop":2},{"ulke":"Fransa","uni":"Grenoble INP","ucret":4100,"kira":1100,"yasam":71.5,"toplam":17300,"pop":1},{"ulke":"İrlanda","uni":"Athlone IT","ucret":13800,"kira":800,"yasam":66.7,"toplam":23400,"pop":2},{"ulke":"Norveç","uni":"University of Oslo","ucret":0,"kira":1400,"yasam":83.2,"toplam":16800,"pop":1},{"ulke":"Finlandiya","uni":"University of Helsinki","ucret":0,"kira":1200,"yasam":79.4,"toplam":14400,"pop":1},{"ulke":"Almanya","uni":"Technical University Berlin","ucret":0,"kira":1100,"yasam":68.9,"toplam":13200,"pop":13},{"ulke":"Danimarka","uni":"University of Copenhagen","ucret":0,"kira":1500,"yasam":82.1,"toplam":18000,"pop":2},{"ulke":"Norveç","uni":"NTNU","ucret":0,"kira":1100,"yasam":75.6,"toplam":13200,"pop":1},{"ulke":"Finlandiya","uni":"Aalto University","ucret":0,"kira":1000,"yasam":77.8,"toplam":12000,"pop":1},{"ulke":"Almanya","uni":"LMU Munich","ucret":0,"kira":1300,"yasam":71.5,"toplam":15600,"pop":13},{"ulke":"Danimarka","uni":"Aarhus University","ucret":0,"kira":1200,"yasam":76.5,"toplam":14400,"pop":2},{"ulke":"Norveç","uni":"University of Bergen","ucret":0,"kira":1200,"yasam":74.3,"toplam":14400,"pop":1},{"ulke":"Finlandiya","uni":"Tampere University","ucret":0,"kira":900,"yasam":72.1,"toplam":10800,"pop":1},{"ulke":"Almanya","uni":"TU Dresden","ucret":0,"kira":900,"yasam":65.4,"toplam":10800,"pop":13},{"ulke":"Danimarka","uni":"University of Southern Denmark","ucret":0,"kira":1100,"yasam":73.2,"toplam":13200,"pop":2},{"ulke":"Norveç","uni":"UiT Arctic University","ucret":0,"kira":1000,"yasam":71.2,"toplam":12000,"pop":1},{"ulke":"Finlandiya","uni":"University of Turku","ucret":0,"kira":850,"yasam":71.8,"toplam":10200,"pop":1},{"ulke":"Almanya","uni":"TU Hamburg","ucret":0,"kira":1200,"yasam":69.8,"toplam":14400,"pop":13},{"ulke":"Danimarka","uni":"Aalborg University","ucret":0,"kira":1000,"yasam":71.5,"toplam":12000,"pop":2},{"ulke":"Norveç","uni":"University of Stavanger","ucret":0,"kira":1100,"yasam":72.4,"toplam":13200,"pop":1},{"ulke":"Finlandiya","uni":"University of Oulu","ucret":0,"kira":800,"yasam":70.2,"toplam":9600,"pop":1},{"ulke":"Danimarka","uni":"Roskilde University","ucret":0,"kira":1000,"yasam":70.8,"toplam":12000,"pop":2},{"ulke":"Norveç","uni":"Norwegian University of Life Sciences","ucret":0,"kira":900,"yasam":70.5,"toplam":10800,"pop":1},{"ulke":"Finlandiya","uni":"University of Vaasa","ucret":0,"kira":800,"yasam":69.8,"toplam":9600,"pop":1},{"ulke":"Almanya","uni":"KIT","ucret":0,"kira":1000,"yasam":67.9,"toplam":12000,"pop":13},{"ulke":"Danimarka","uni":"Technical University of Denmark","ucret":0,"kira":1400,"yasam":81.2,"toplam":16800,"pop":2},{"ulke":"Norveç","uni":"Nord University","ucret":0,"kira":850,"yasam":69.4,"toplam":10200,"pop":1},{"ulke":"Finlandiya","uni":"University of JyvÃ¤skylÃ¤","ucret":0,"kira":750,"yasam":68.7,"toplam":9000,"pop":1},{"ulke":"Almanya","uni":"TU Darmstadt","ucret":0,"kira":950,"yasam":66.8,"toplam":11400,"pop":13},{"ulke":"Danimarka","uni":"University of Southern Denmark","ucret":0,"kira":900,"yasam":69.5,"toplam":10800,"pop":2},{"ulke":"Norveç","uni":"NTNU GjÃ¸vik","ucret":0,"kira":800,"yasam":68.9,"toplam":9600,"pop":1},{"ulke":"Finlandiya","uni":"LUT University","ucret":0,"kira":700,"yasam":67.5,"toplam":8400,"pop":1},{"ulke":"Almanya","uni":"University of Bremen","ucret":0,"kira":900,"yasam":66.5,"toplam":10800,"pop":13},{"ulke":"Danimarka","uni":"University of Southern Denmark","ucret":0,"kira":850,"yasam":68.4,"toplam":10200,"pop":2},{"ulke":"Norveç","uni":"University of Agder","ucret":0,"kira":850,"yasam":67.8,"toplam":10200,"pop":1},{"ulke":"Finlandiya","uni":"University of Eastern Finland","ucret":0,"kira":700,"yasam":66.9,"toplam":8400,"pop":1},{"ulke":"Danimarka","uni":"University of Copenhagen","ucret":0,"kira":900,"yasam":67.5,"toplam":10800,"pop":2},{"ulke":"Norveç","uni":"University of South-Eastern Norway","ucret":0,"kira":800,"yasam":66.7,"toplam":9600,"pop":1},{"ulke":"Finlandiya","uni":"University of Eastern Finland","ucret":0,"kira":650,"yasam":65.8,"toplam":7800,"pop":1},{"ulke":"Almanya","uni":"University of Jena","ucret":0,"kira":850,"yasam":65.4,"toplam":10200,"pop":13},{"ulke":"Danimarka","uni":"Aarhus University","ucret":0,"kira":800,"yasam":66.2,"toplam":9600,"pop":2},{"ulke":"Yeni Zelanda","uni":"University of Auckland","ucret":32000,"kira":1200,"yasam":79.5,"toplam":46400,"pop":1},{"ulke":"ABD","uni":"Northeastern University","ucret":54000,"kira":2000,"yasam":82.1,"toplam":78000,"pop":17},{"ulke":"İsveç","uni":"KTH Royal Institute","ucret":0,"kira":1100,"yasam":78.4,"toplam":13200,"pop":2},{"ulke":"Hollanda","uni":"University of Amsterdam","ucret":15000,"kira":1300,"yasam":81.2,"toplam":30600,"pop":3},{"ulke":"Portekiz","uni":"University of Lisbon","ucret":7000,"kira":800,"yasam":65.8,"toplam":16600,"pop":1},{"ulke":"Yeni Zelanda","uni":"Victoria University","ucret":30000,"kira":1100,"yasam":75.6,"toplam":43200,"pop":1},{"ulke":"ABD","uni":"UT Austin","ucret":48000,"kira":1600,"yasam":68.9,"toplam":67200,"pop":17},{"ulke":"İsveç","uni":"Uppsala University","ucret":0,"kira":900,"yasam":72.3,"toplam":10800,"pop":2},{"ulke":"Hollanda","uni":"Erasmus University","ucret":14500,"kira":1200,"yasam":77.8,"toplam":28900,"pop":3},{"ulke":"Portekiz","uni":"University of Porto","ucret":6500,"kira":700,"yasam":62.4,"toplam":14900,"pop":1},{"ulke":"Yeni Zelanda","uni":"University of Canterbury","ucret":31000,"kira":950,"yasam":72.4,"toplam":42400,"pop":1},{"ulke":"İsveç","uni":"Chalmers University","ucret":0,"kira":950,"yasam":71.2,"toplam":11400,"pop":2},{"ulke":"Hollanda","uni":"TU Delft","ucret":15500,"kira":1100,"yasam":76.5,"toplam":28700,"pop":3},{"ulke":"Portekiz","uni":"University of Coimbra","ucret":6000,"kira":600,"yasam":58.9,"toplam":13200,"pop":1},{"ulke":"Yeni Zelanda","uni":"University of Otago","ucret":29000,"kira":900,"yasam":70.2,"toplam":39800,"pop":1},{"ulke":"İsveç","uni":"Lund University","ucret":0,"kira":1000,"yasam":73.4,"toplam":12000,"pop":2},{"ulke":"Hollanda","uni":"TU Eindhoven","ucret":14800,"kira":950,"yasam":72.3,"toplam":26200,"pop":3},{"ulke":"Portekiz","uni":"University of Minho","ucret":6200,"kira":550,"yasam":57.8,"toplam":12800,"pop":1},{"ulke":"Yeni Zelanda","uni":"University of Waikato","ucret":28500,"kira":850,"yasam":68.9,"toplam":38700,"pop":1},{"ulke":"İsveç","uni":"LinkÃ¶ping University","ucret":0,"kira":850,"yasam":69.8,"toplam":10200,"pop":2},{"ulke":"Hollanda","uni":"Utrecht University","ucret":13900,"kira":1100,"yasam":75.4,"toplam":27100,"pop":3},{"ulke":"Portekiz","uni":"University of Aveiro","ucret":6800,"kira":500,"yasam":56.7,"toplam":12800,"pop":1},{"ulke":"Yeni Zelanda","uni":"Massey University","ucret":27500,"kira":800,"yasam":67.5,"toplam":37100,"pop":1},{"ulke":"İsveç","uni":"UmeÃ¥ University","ucret":0,"kira":800,"yasam":68.5,"toplam":9600,"pop":2},{"ulke":"Hollanda","uni":"University of Groningen","ucret":14200,"kira":900,"yasam":71.2,"toplam":25000,"pop":3},{"ulke":"Portekiz","uni":"University of Algarve","ucret":5900,"kira":480,"yasam":55.4,"toplam":11660,"pop":1},{"ulke":"Yeni Zelanda","uni":"AUT University","ucret":29500,"kira":1150,"yasam":79.5,"toplam":43300,"pop":1},{"ulke":"ABD","uni":"NC State University","ucret":47000,"kira":1400,"yasam":67.8,"toplam":63800,"pop":17},{"ulke":"İsveç","uni":"Karlstad University","ucret":0,"kira":750,"yasam":67.2,"toplam":9000,"pop":2},{"ulke":"Hollanda","uni":"Tilburg University","ucret":14000,"kira":950,"yasam":70.5,"toplam":25400,"pop":3},{"ulke":"Portekiz","uni":"UTAD","ucret":5700,"kira":450,"yasam":54.3,"toplam":11100,"pop":1},{"ulke":"Yeni Zelanda","uni":"Lincoln University","ucret":28000,"kira":900,"yasam":72.4,"toplam":38800,"pop":1},{"ulke":"ABD","uni":"UC Davis","ucret":48000,"kira":1600,"yasam":73.2,"toplam":67200,"pop":17},{"ulke":"İsveç","uni":"Linnaeus University","ucret":0,"kira":700,"yasam":66.5,"toplam":8400,"pop":2},{"ulke":"Hollanda","uni":"Wageningen University","ucret":14500,"kira":900,"yasam":69.8,"toplam":25300,"pop":3},{"ulke":"Portekiz","uni":"University of Madeira","ucret":5500,"kira":400,"yasam":53.2,"toplam":10300,"pop":1},{"ulke":"İspanya","uni":"Universidad PolitÃ©cnica de Madrid","ucret":3500,"kira":1100,"yasam":71.4,"toplam":16700,"pop":1},{"ulke":"İtalya","uni":"Politecnico di Milano","ucret":4000,"kira":1200,"yasam":73.2,"toplam":18400,"pop":1},{"ulke":"Yunanistan","uni":"National Technical University","ucret":0,"kira":650,"yasam":65.8,"toplam":7800,"pop":0},{"ulke":"Avusturya","uni":"TU Wien","ucret":1500,"kira":950,"yasam":78.5,"toplam":12900,"pop":1},{"ulke":"Meksika","uni":"UNAM","ucret":800,"kira":600,"yasam":52.4,"toplam":8000,"pop":0},{"ulke":"İspanya","uni":"Universitat PolitÃ¨cnica Catalunya","ucret":3800,"kira":1000,"yasam":73.6,"toplam":15800,"pop":1},{"ulke":"İtalya","uni":"Sapienza University","ucret":3500,"kira":1100,"yasam":71.2,"toplam":16700,"pop":1},{"ulke":"Yunanistan","uni":"Aristotle University","ucret":0,"kira":500,"yasam":62.4,"toplam":6000,"pop":0},{"ulke":"Avusturya","uni":"TU Graz","ucret":1500,"kira":750,"yasam":71.2,"toplam":10500,"pop":1},{"ulke":"Meksika","uni":"TecnolÃ³gico de Monterrey","ucret":12000,"kira":700,"yasam":48.9,"toplam":20400,"pop":0},{"ulke":"İspanya","uni":"Universitat de ValÃ¨ncia","ucret":3200,"kira":800,"yasam":68.5,"toplam":12800,"pop":1},{"ulke":"İtalya","uni":"Politecnico di Torino","ucret":3800,"kira":900,"yasam":69.8,"toplam":14600,"pop":1},{"ulke":"Yunanistan","uni":"University of Patras","ucret":0,"kira":450,"yasam":60.5,"toplam":5400,"pop":0},{"ulke":"Avusturya","uni":"Johannes Kepler University","ucret":1500,"kira":700,"yasam":70.4,"toplam":9900,"pop":1},{"ulke":"Meksika","uni":"Universidad de Guadalajara","ucret":900,"kira":500,"yasam":45.6,"toplam":6900,"pop":0},{"ulke":"İspanya","uni":"Universidad de Sevilla","ucret":3000,"kira":750,"yasam":65.4,"toplam":12000,"pop":1},{"ulke":"İtalya","uni":"University of Bologna","ucret":3600,"kira":950,"yasam":70.5,"toplam":15000,"pop":1},{"ulke":"Yunanistan","uni":"University of Crete","ucret":0,"kira":480,"yasam":61.2,"toplam":5760,"pop":0},{"ulke":"Avusturya","uni":"University of Salzburg","ucret":1500,"kira":800,"yasam":72.3,"toplam":11100,"pop":1},{"ulke":"Meksika","uni":"UDLAP","ucret":10000,"kira":450,"yasam":44.5,"toplam":15400,"pop":0},{"ulke":"İspanya","uni":"University of the Basque Country","ucret":3400,"kira":850,"yasam":67.8,"toplam":13600,"pop":1},{"ulke":"İtalya","uni":"University of Florence","ucret":3500,"kira":1000,"yasam":71.2,"toplam":15500,"pop":1},{"ulke":"Yunanistan","uni":"University of Thessaly","ucret":0,"kira":400,"yasam":59.8,"toplam":4800,"pop":0},{"ulke":"Avusturya","uni":"University of Innsbruck","ucret":1500,"kira":780,"yasam":71.5,"toplam":10860,"pop":1},{"ulke":"Meksika","uni":"Tecnologico de Monterrey","ucret":11000,"kira":480,"yasam":46.7,"toplam":16760,"pop":0},{"ulke":"İspanya","uni":"University of Granada","ucret":2800,"kira":700,"yasam":64.5,"toplam":11200,"pop":1},{"ulke":"İtalya","uni":"University of Naples","ucret":3200,"kira":800,"yasam":67.8,"toplam":12800,"pop":1},{"ulke":"Yunanistan","uni":"University of Ioannina","ucret":0,"kira":380,"yasam":58.9,"toplam":4560,"pop":0},{"ulke":"Avusturya","uni":"University of Klagenfurt","ucret":1500,"kira":720,"yasam":69.4,"toplam":10140,"pop":1},{"ulke":"Meksika","uni":"Universidad Autonoma de Yucatan","ucret":3500,"kira":400,"yasam":43.2,"toplam":8300,"pop":0},{"ulke":"İspanya","uni":"University of Zaragoza","ucret":2900,"kira":650,"yasam":63.2,"toplam":10700,"pop":1},{"ulke":"İtalya","uni":"University of Pisa","ucret":3300,"kira":850,"yasam":68.9,"toplam":13500,"pop":1},{"ulke":"Yunanistan","uni":"University of the Aegean","ucret":0,"kira":420,"yasam":61.2,"toplam":5040,"pop":0},{"ulke":"Avusturya","uni":"MontanuniversitÃ¤t Leoben","ucret":1500,"kira":700,"yasam":68.7,"toplam":9900,"pop":1},{"ulke":"Meksika","uni":"CETYS Universidad","ucret":9500,"kira":550,"yasam":45.4,"toplam":16100,"pop":0},{"ulke":"İspanya","uni":"University of Salamanca","ucret":3100,"kira":600,"yasam":62.1,"toplam":10300,"pop":1},{"ulke":"İtalya","uni":"University of Padua","ucret":3400,"kira":900,"yasam":69.5,"toplam":14200,"pop":1},{"ulke":"Yunanistan","uni":"Technical University of Crete","ucret":0,"kira":450,"yasam":60.4,"toplam":5400,"pop":0},{"ulke":"Avusturya","uni":"FH Vorarlberg","ucret":1500,"kira":800,"yasam":70.2,"toplam":11100,"pop":1},{"ulke":"Meksika","uni":"UASLP","ucret":2800,"kira":380,"yasam":42.8,"toplam":7360,"pop":0},{"ulke":"Türkiye","uni":"Bogazici University","ucret":1500,"kira":600,"yasam":51.2,"toplam":8700,"pop":0},{"ulke":"Yunanistan","uni":"Athens University of Economics","ucret":0,"kira":650,"yasam":65.8,"toplam":7800,"pop":0},{"ulke":"Belçika","uni":"KU Leuven","ucret":3800,"kira":950,"yasam":76.5,"toplam":15200,"pop":1},{"ulke":"Macaristan","uni":"Budapest University of Technology","ucret":6500,"kira":500,"yasam":53.4,"toplam":12500,"pop":0},{"ulke":"Rusya","uni":"Moscow State University","ucret":5500,"kira":600,"yasam":62.3,"toplam":12700,"pop":0},{"ulke":"Türkiye","uni":"Middle East Technical University","ucret":1200,"kira":450,"yasam":48.5,"toplam":6600,"pop":0},{"ulke":"Yunanistan","uni":"University of Macedonia","ucret":0,"kira":500,"yasam":62.4,"toplam":6000,"pop":0},{"ulke":"Belçika","uni":"Ghent University","ucret":3500,"kira":850,"yasam":72.8,"toplam":13700,"pop":1},{"ulke":"Macaristan","uni":"University of Debrecen","ucret":5800,"kira":400,"yasam":48.9,"toplam":10600,"pop":0},{"ulke":"Rusya","uni":"ITMO University","ucret":5000,"kira":550,"yasam":60.1,"toplam":11600,"pop":0},{"ulke":"Türkiye","uni":"Ege University","ucret":1300,"kira":400,"yasam":47.8,"toplam":6100,"pop":0},{"ulke":"Belçika","uni":"Vrije Universiteit Brussel","ucret":3600,"kira":900,"yasam":75.4,"toplam":14400,"pop":1},{"ulke":"Macaristan","uni":"University of Szeged","ucret":6000,"kira":380,"yasam":47.2,"toplam":10560,"pop":0},{"ulke":"Rusya","uni":"Novosibirsk State University","ucret":4800,"kira":400,"yasam":55.4,"toplam":9600,"pop":0},{"ulke":"Türkiye","uni":"Anadolu University","ucret":1000,"kira":350,"yasam":45.6,"toplam":5200,"pop":0},{"ulke":"Belçika","uni":"University of Antwerp","ucret":3700,"kira":800,"yasam":71.2,"toplam":13300,"pop":1},{"ulke":"Macaristan","uni":"University of Pecs","ucret":5500,"kira":350,"yasam":46.8,"toplam":9700,"pop":0},{"ulke":"Rusya","uni":"Kazan Federal University","ucret":4500,"kira":380,"yasam":52.3,"toplam":9060,"pop":0},{"ulke":"Türkiye","uni":"Uludag University","ucret":1100,"kira":380,"yasam":46.5,"toplam":5660,"pop":0},{"ulke":"Belçika","uni":"UCLouvain","ucret":3500,"kira":780,"yasam":70.5,"toplam":12860,"pop":1},{"ulke":"Macaristan","uni":"Szechenyi Istvan University","ucret":5200,"kira":320,"yasam":45.6,"toplam":9040,"pop":0},{"ulke":"Rusya","uni":"Tomsk State University","ucret":4600,"kira":350,"yasam":51.2,"toplam":8800,"pop":0},{"ulke":"Türkiye","uni":"Akdeniz University","ucret":1400,"kira":420,"yasam":47.8,"toplam":6440,"pop":0},{"ulke":"Yunanistan","uni":"University of Piraeus","ucret":0,"kira":550,"yasam":63.4,"toplam":6600,"pop":0},{"ulke":"Belçika","uni":"Hasselt University","ucret":3400,"kira":750,"yasam":69.8,"toplam":12400,"pop":1},{"ulke":"Macaristan","uni":"University of Miskolc","ucret":5300,"kira":300,"yasam":44.5,"toplam":8900,"pop":0},{"ulke":"Rusya","uni":"Ural Federal University","ucret":4700,"kira":400,"yasam":53.4,"toplam":9500,"pop":0},{"ulke":"Türkiye","uni":"Erciyes University","ucret":1200,"kira":350,"yasam":45.2,"toplam":5400,"pop":0},{"ulke":"Yunanistan","uni":"Democritus University","ucret":0,"kira":380,"yasam":58.7,"toplam":4560,"pop":0},{"ulke":"Belçika","uni":"University of Liege","ucret":3600,"kira":720,"yasam":68.9,"toplam":12240,"pop":1},{"ulke":"Macaristan","uni":"University of Pannonia","ucret":5100,"kira":310,"yasam":44.8,"toplam":8820,"pop":0},{"ulke":"Rusya","uni":"Samara State University","ucret":4400,"kira":370,"yasam":50.5,"toplam":8840,"pop":0},{"ulke":"Türkiye","uni":"Selcuk University","ucret":1000,"kira":330,"yasam":44.5,"toplam":4960,"pop":0},{"ulke":"Yunanistan","uni":"University of the Aegean","ucret":0,"kira":400,"yasam":59.2,"toplam":4800,"pop":0},{"ulke":"Belçika","uni":"University of Mons","ucret":3500,"kira":700,"yasam":67.8,"toplam":11900,"pop":1},{"ulke":"Macaristan","uni":"John von Neumann University","ucret":5400,"kira":290,"yasam":43.9,"toplam":8880,"pop":0},{"ulke":"Rusya","uni":"Southern Federal University","ucret":4200,"kira":350,"yasam":49.8,"toplam":8400,"pop":0},{"ulke":"Brezilya","uni":"University of Sao Paulo","ucret":0,"kira":600,"yasam":55.8,"toplam":7200,"pop":0},{"ulke":"Hindistan","uni":"Indian Institute of Science","ucret":2000,"kira":300,"yasam":45.2,"toplam":5600,"pop":1},{"ulke":"Tayland","uni":"Chulalongkorn University","ucret":15000,"kira":500,"yasam":51.4,"toplam":21000,"pop":0},{"ulke":"Mısır","uni":"Cairo University","ucret":2500,"kira":250,"yasam":null,"toplam":5500,"pop":0},{"ulke":"Singapur","uni":"National University of Singapore","ucret":42000,"kira":1200,"yasam":83.8,"toplam":56400,"pop":2},{"ulke":"BAE","uni":"University of Dubai","ucret":25000,"kira":1100,"yasam":72.4,"toplam":38200,"pop":0},{"ulke":"Brezilya","uni":"PUC-Rio","ucret":8000,"kira":550,"yasam":53.2,"toplam":14600,"pop":0},{"ulke":"Hindistan","uni":"IIT Bombay","ucret":1800,"kira":350,"yasam":47.5,"toplam":6000,"pop":1},{"ulke":"Tayland","uni":"Chiang Mai University","ucret":12000,"kira":300,"yasam":45.6,"toplam":15600,"pop":0},{"ulke":"Singapur","uni":"Nanyang Technological University","ucret":40000,"kira":1100,"yasam":83.8,"toplam":53200,"pop":2},{"ulke":"BAE","uni":"Khalifa University","ucret":27000,"kira":1000,"yasam":71.8,"toplam":39000,"pop":0},{"ulke":"Brezilya","uni":"UNICAMP","ucret":0,"kira":450,"yasam":51.4,"toplam":5400,"pop":0},{"ulke":"Hindistan","uni":"IIT Delhi","ucret":1900,"kira":320,"yasam":44.8,"toplam":5740,"pop":1},{"ulke":"Tayland","uni":"Khon Kaen University","ucret":11000,"kira":250,"yasam":42.5,"toplam":14000,"pop":0},{"ulke":"Mısır","uni":"Alexandria University","ucret":2200,"kira":200,"yasam":null,"toplam":4600,"pop":0},{"ulke":"Singapur","uni":"Singapore Management University","ucret":38000,"kira":1150,"yasam":83.8,"toplam":51800,"pop":2},{"ulke":"BAE","uni":"American University of Sharjah","ucret":26000,"kira":900,"yasam":68.5,"toplam":36800,"pop":0},{"ulke":"Brezilya","uni":"UFRGS","ucret":0,"kira":400,"yasam":49.8,"toplam":4800,"pop":0},{"ulke":"Hindistan","uni":"IIT Madras","ucret":1700,"kira":280,"yasam":42.4,"toplam":5060,"pop":1},{"ulke":"Tayland","uni":"Prince of Songkla University","ucret":10000,"kira":300,"yasam":44.8,"toplam":13600,"pop":0},{"ulke":"Mısır","uni":"Ain Shams University","ucret":2400,"kira":220,"yasam":31.2,"toplam":5040,"pop":0},{"ulke":"Singapur","uni":"Singapore University of Technology","ucret":39000,"kira":1100,"yasam":83.8,"toplam":52200,"pop":2},{"ulke":"BAE","uni":"Ajman University","ucret":23000,"kira":800,"yasam":65.4,"toplam":32600,"pop":0},{"ulke":"Brezilya","uni":"UFPE","ucret":0,"kira":350,"yasam":47.5,"toplam":4200,"pop":0},{"ulke":"Hindistan","uni":"IIT Hyderabad","ucret":1800,"kira":260,"yasam":41.2,"toplam":4920,"pop":1},{"ulke":"Tayland","uni":"Prince of Songkla University","ucret":9500,"kira":280,"yasam":43.2,"toplam":12860,"pop":0},{"ulke":"Mısır","uni":"Port Said University","ucret":2100,"kira":180,"yasam":null,"toplam":4260,"pop":0},{"ulke":"Singapur","uni":"SUTD","ucret":37000,"kira":1050,"yasam":83.8,"toplam":49600,"pop":2},{"ulke":"BAE","uni":"UAE University","ucret":24000,"kira":750,"yasam":64.2,"toplam":33000,"pop":0},{"ulke":"Brezilya","uni":"UFSC","ucret":0,"kira":400,"yasam":48.9,"toplam":4800,"pop":0},{"ulke":"Hindistan","uni":"IIT Pune","ucret":1600,"kira":250,"yasam":40.5,"toplam":4600,"pop":1},{"ulke":"Tayland","uni":"Suranaree University","ucret":9000,"kira":250,"yasam":41.8,"toplam":12000,"pop":0},{"ulke":"Mısır","uni":"Mansoura University","ucret":2000,"kira":170,"yasam":null,"toplam":4040,"pop":0},{"ulke":"Singapur","uni":"SIM Global Education","ucret":35000,"kira":1000,"yasam":83.8,"toplam":47000,"pop":2},{"ulke":"BAE","uni":"RAK University","ucret":22000,"kira":700,"yasam":62.5,"toplam":30400,"pop":0},{"ulke":"Brezilya","uni":"UFBA","ucret":0,"kira":380,"yasam":46.8,"toplam":4560,"pop":0},{"ulke":"Hindistan","uni":"IIT Kanpur","ucret":1900,"kira":240,"yasam":39.8,"toplam":4780,"pop":1},{"ulke":"Tayland","uni":"Thaksin University","ucret":8500,"kira":270,"yasam":42.5,"toplam":11740,"pop":0},{"ulke":"Mısır","uni":"Aswan University","ucret":1900,"kira":160,"yasam":null,"toplam":3820,"pop":0},{"ulke":"BAE","uni":"Fujairah University","ucret":21000,"kira":650,"yasam":61.4,"toplam":28800,"pop":0},{"ulke":"İzlanda","uni":"University of Iceland","ucret":0,"kira":1200,"yasam":84.5,"toplam":14400,"pop":0},{"ulke":"Kolombiya","uni":"Universidad Nacional","ucret":3500,"kira":400,"yasam":41.2,"toplam":8300,"pop":0},{"ulke":"Polonya","uni":"University of Warsaw","ucret":3000,"kira":650,"yasam":54.8,"toplam":10800,"pop":1},{"ulke":"Romanya","uni":"University Politehnica","ucret":2500,"kira":450,"yasam":45.2,"toplam":7900,"pop":0},{"ulke":"Lüksemburg","uni":"University of Luxembourg","ucret":400,"kira":1400,"yasam":83.2,"toplam":17200,"pop":0},{"ulke":"Endonezya","uni":"University of Indonesia","ucret":5000,"kira":400,"yasam":45.8,"toplam":9800,"pop":0},{"ulke":"İzlanda","uni":"University of Akureyri","ucret":0,"kira":900,"yasam":78.4,"toplam":10800,"pop":0},{"ulke":"Kolombiya","uni":"Universidad de Antioquia","ucret":4000,"kira":350,"yasam":38.5,"toplam":8200,"pop":0},{"ulke":"Polonya","uni":"Jagiellonian University","ucret":2800,"kira":600,"yasam":52.4,"toplam":10000,"pop":1},{"ulke":"Romanya","uni":"Babes-Bolyai University","ucret":2200,"kira":400,"yasam":43.8,"toplam":7000,"pop":0},{"ulke":"Lüksemburg","uni":"Luxembourg School of Business","ucret":400,"kira":1200,"yasam":79.5,"toplam":14800,"pop":0},{"ulke":"Endonezya","uni":"Institut Teknologi Bandung","ucret":4500,"kira":300,"yasam":42.4,"toplam":8100,"pop":0},{"ulke":"İzlanda","uni":"Reykjavik University","ucret":0,"kira":1150,"yasam":84.5,"toplam":13800,"pop":0},{"ulke":"Kolombiya","uni":"Universidad del Valle","ucret":3200,"kira":300,"yasam":36.8,"toplam":6800,"pop":0},{"ulke":"Polonya","uni":"Wroclaw University of Technology","ucret":2600,"kira":550,"yasam":50.5,"toplam":9200,"pop":1},{"ulke":"Romanya","uni":"Politehnica University","ucret":2400,"kira":380,"yasam":42.5,"toplam":6960,"pop":0},{"ulke":"Lüksemburg","uni":"Luxembourg Institute of Science","ucret":400,"kira":1100,"yasam":78.4,"toplam":13600,"pop":0},{"ulke":"Endonezya","uni":"Gadjah Mada University","ucret":4000,"kira":250,"yasam":40.2,"toplam":7000,"pop":0},{"ulke":"İzlanda","uni":"Iceland University of Arts","ucret":0,"kira":1000,"yasam":82.1,"toplam":12000,"pop":0},{"ulke":"Kolombiya","uni":"Universidad del Norte","ucret":3800,"kira":280,"yasam":35.4,"toplam":7160,"pop":0},{"ulke":"Polonya","uni":"Adam Mickiewicz University","ucret":2700,"kira":580,"yasam":51.2,"toplam":9660,"pop":1},{"ulke":"Romanya","uni":"Alexandru Ioan Cuza University","ucret":2100,"kira":350,"yasam":41.8,"toplam":6300,"pop":0},{"ulke":"Lüksemburg","uni":"Sacred Heart University","ucret":400,"kira":1300,"yasam":81.5,"toplam":16000,"pop":0},{"ulke":"Endonezya","uni":"Institut Teknologi Sepuluh","ucret":3800,"kira":280,"yasam":41.5,"toplam":7160,"pop":0},{"ulke":"İzlanda","uni":"Bifrost University","ucret":0,"kira":950,"yasam":81.2,"toplam":11400,"pop":0},{"ulke":"Kolombiya","uni":"UIS","ucret":3500,"kira":260,"yasam":34.8,"toplam":6620,"pop":0},{"ulke":"Polonya","uni":"Gdansk University of Technology","ucret":2500,"kira":520,"yasam":49.8,"toplam":8740,"pop":1},{"ulke":"Romanya","uni":"Transilvania University","ucret":2000,"kira":330,"yasam":40.5,"toplam":5960,"pop":0},{"ulke":"Lüksemburg","uni":"Miami University Dolibois","ucret":400,"kira":1150,"yasam":77.8,"toplam":14200,"pop":0},{"ulke":"Endonezya","uni":"Brawijaya University","ucret":3500,"kira":240,"yasam":39.8,"toplam":6380,"pop":0},{"ulke":"Polonya","uni":"Lodz University of Technology","ucret":2400,"kira":500,"yasam":48.5,"toplam":8400,"pop":1},{"ulke":"Romanya","uni":"Ovidius University","ucret":1900,"kira":320,"yasam":39.8,"toplam":5740,"pop":0},{"ulke":"Lüksemburg","uni":"European Business University","ucret":400,"kira":1100,"yasam":76.5,"toplam":13600,"pop":0},{"ulke":"Endonezya","uni":"Diponegoro University","ucret":3200,"kira":220,"yasam":38.5,"toplam":5840,"pop":0},{"ulke":"İzlanda","uni":"Agricultural University","ucret":0,"kira":900,"yasam":79.8,"toplam":10800,"pop":0},{"ulke":"Kolombiya","uni":"Universidad de Cartagena","ucret":3300,"kira":290,"yasam":35.2,"toplam":6780,"pop":0},{"ulke":"Polonya","uni":"University of Silesia","ucret":2300,"kira":480,"yasam":47.8,"toplam":8060,"pop":1},{"ulke":"Romanya","uni":"University of Craiova","ucret":2200,"kira":300,"yasam":38.9,"toplam":5800,"pop":0},{"ulke":"Lüksemburg","uni":"Chamber of Commerce School","ucret":400,"kira":1050,"yasam":75.4,"toplam":13000,"pop":0},{"ulke":"Endonezya","uni":"Udayana University","ucret":3000,"kira":200,"yasam":37.9,"toplam":5400,"pop":0},{"ulke":"Tunus","uni":"University of Tunis","ucret":1500,"kira":250,"yasam":35.8,"toplam":4500,"pop":0},{"ulke":"Kıbrıs","uni":"University of Cyprus","ucret":8000,"kira":600,"yasam":65.4,"toplam":15200,"pop":0},{"ulke":"Hırvatistan","uni":"University of Zagreb","ucret":4000,"kira":450,"yasam":58.9,"toplam":9400,"pop":0},{"ulke":"Dominik Cumhuriyeti","uni":"INTEC","ucret":6000,"kira":350,"yasam":42.5,"toplam":10200,"pop":0},{"ulke":"Fas","uni":"Mohammed V University","ucret":2000,"kira":300,"yasam":41.2,"toplam":5600,"pop":0},{"ulke":"Peru","uni":"PUCP","ucret":8500,"kira":400,"yasam":44.8,"toplam":13300,"pop":0},{"ulke":"Arjantin","uni":"University of Buenos Aires","ucret":0,"kira":350,"yasam":42.5,"toplam":4200,"pop":0},{"ulke":"Tunus","uni":"University of Sfax","ucret":1400,"kira":200,"yasam":33.2,"toplam":3800,"pop":0},{"ulke":"Kıbrıs","uni":"Cyprus University of Technology","ucret":7500,"kira":550,"yasam":62.8,"toplam":14100,"pop":0},{"ulke":"Hırvatistan","uni":"University of Split","ucret":3800,"kira":400,"yasam":56.4,"toplam":8600,"pop":0},{"ulke":"Dominik Cumhuriyeti","uni":"PUCMM","ucret":5500,"kira":300,"yasam":40.2,"toplam":9100,"pop":0},{"ulke":"Fas","uni":"Hassan II University","ucret":2200,"kira":350,"yasam":43.5,"toplam":6400,"pop":0},{"ulke":"Peru","uni":"Universidad San Agustin","ucret":7000,"kira":300,"yasam":41.2,"toplam":10600,"pop":0},{"ulke":"Arjantin","uni":"National University of Cordoba","ucret":0,"kira":280,"yasam":39.8,"toplam":3360,"pop":0},{"ulke":"Tunus","uni":"University of Sousse","ucret":1300,"kira":180,"yasam":32.5,"toplam":3460,"pop":0},{"ulke":"Kıbrıs","uni":"American University Cyprus","ucret":8200,"kira":500,"yasam":61.5,"toplam":14200,"pop":0},{"ulke":"Hırvatistan","uni":"University of Rijeka","ucret":3500,"kira":380,"yasam":54.8,"toplam":8060,"pop":0},{"ulke":"Dominik Cumhuriyeti","uni":"Universidad Central Este","ucret":5000,"kira":280,"yasam":38.5,"toplam":8360,"pop":0},{"ulke":"Fas","uni":"University of Al Quaraouiyine","ucret":1800,"kira":250,"yasam":39.8,"toplam":4800,"pop":0},{"ulke":"Peru","uni":"Universidad Nacional de Trujillo","ucret":7500,"kira":280,"yasam":40.5,"toplam":10860,"pop":0},{"ulke":"Arjantin","uni":"National University of Rosario","ucret":0,"kira":260,"yasam":38.5,"toplam":3120,"pop":0},{"ulke":"Tunus","uni":"University of Monastir","ucret":1600,"kira":170,"yasam":null,"toplam":3640,"pop":0},{"ulke":"Kıbrıs","uni":"Eastern Mediterranean University","ucret":7800,"kira":480,"yasam":59.8,"toplam":13560,"pop":0},{"ulke":"Hırvatistan","uni":"University of Osijek","ucret":3200,"kira":350,"yasam":52.5,"toplam":7400,"pop":0},{"ulke":"Dominik Cumhuriyeti","uni":"UCNE","ucret":4800,"kira":260,"yasam":37.2,"toplam":7920,"pop":0},{"ulke":"Fas","uni":"Cadi Ayyad University","ucret":2100,"kira":280,"yasam":40.5,"toplam":5460,"pop":0},{"ulke":"Peru","uni":"Universidad San Antonio Abad","ucret":6800,"kira":260,"yasam":39.8,"toplam":9920,"pop":0},{"ulke":"Arjantin","uni":"National University of La Plata","ucret":0,"kira":240,"yasam":37.5,"toplam":2880,"pop":0},{"ulke":"Tunus","uni":"University of Gabes","ucret":1400,"kira":160,"yasam":null,"toplam":3320,"pop":0},{"ulke":"Hırvatistan","uni":"University of Zadar","ucret":3600,"kira":370,"yasam":53.2,"toplam":8040,"pop":0},{"ulke":"Kıbrıs","uni":"Neapolis University","ucret":7400,"kira":450,"yasam":58.5,"toplam":12800,"pop":0},{"ulke":"Dominik Cumhuriyeti","uni":"UTESA","ucret":4500,"kira":250,"yasam":36.8,"toplam":7500,"pop":0},{"ulke":"Fas","uni":"Abdelmalek Essaadi University","ucret":1900,"kira":260,"yasam":38.9,"toplam":5020,"pop":0},{"ulke":"Peru","uni":"Universidad de Piura","ucret":7200,"kira":250,"yasam":38.5,"toplam":10200,"pop":0},{"ulke":"Arjantin","uni":"National University of Cuyo","ucret":0,"kira":230,"yasam":36.8,"toplam":2760,"pop":0},{"ulke":"Tunus","uni":"University of Carthage","ucret":1200,"kira":150,"yasam":null,"toplam":3000,"pop":0},{"ulke":"Kıbrıs","uni":"Girne American University","ucret":7600,"kira":430,"yasam":57.8,"toplam":12760,"pop":0},{"ulke":"Hırvatistan","uni":"University of Dubrovnik","ucret":3400,"kira":390,"yasam":54.5,"toplam":8080,"pop":0},{"ulke":"Fas","uni":"Mohammed I University","ucret":1700,"kira":240,"yasam":37.5,"toplam":4580,"pop":0},{"ulke":"Peru","uni":"Universidad San Martin","ucret":6500,"kira":240,"yasam":37.8,"toplam":9380,"pop":0},{"ulke":"Ekvador","uni":"Universidad San Francisco","ucret":8500,"kira":400,"yasam":45.8,"toplam":13300,"pop":0},{"ulke":"Lübnan","uni":"American University of Beirut","ucret":20000,"kira":600,"yasam":58.9,"toplam":27200,"pop":0},{"ulke":"Bahreyn","uni":"University of Bahrain","ucret":7000,"kira":700,"yasam":65.4,"toplam":15400,"pop":0},{"ulke":"Uruguay","uni":"Universidad de la Republica","ucret":0,"kira":450,"yasam":52.4,"toplam":5400,"pop":0},{"ulke":"Bulgaristan","uni":"Sofia University","ucret":3500,"kira":400,"yasam":48.5,"toplam":8300,"pop":0},{"ulke":"Gana","uni":"University of Ghana","ucret":4500,"kira":300,"yasam":42.1,"toplam":8100,"pop":0},{"ulke":"Cezayir","uni":"University of Science and Technology","ucret":1200,"kira":250,"yasam":38.5,"toplam":4200,"pop":0},{"ulke":"Panama","uni":"Universidad Tecnologica","ucret":7500,"kira":600,"yasam":51.2,"toplam":14700,"pop":0},{"ulke":"Ekvador","uni":"ESPOL","ucret":7800,"kira":350,"yasam":43.2,"toplam":12000,"pop":0},{"ulke":"Lübnan","uni":"Lebanese American University","ucret":18000,"kira":500,"yasam":55.4,"toplam":24000,"pop":0},{"ulke":"Bahreyn","uni":"Royal University for Women","ucret":8000,"kira":650,"yasam":63.2,"toplam":15800,"pop":0},{"ulke":"Uruguay","uni":"Universidad ORT Uruguay","ucret":6500,"kira":380,"yasam":48.5,"toplam":11060,"pop":0},{"ulke":"Bulgaristan","uni":"Plovdiv University","ucret":3200,"kira":350,"yasam":45.8,"toplam":7400,"pop":0},{"ulke":"Gana","uni":"Kwame Nkrumah University","ucret":4200,"kira":250,"yasam":39.8,"toplam":7200,"pop":0},{"ulke":"Cezayir","uni":"University of Oran","ucret":1100,"kira":220,"yasam":36.4,"toplam":3740,"pop":0},{"ulke":"Panama","uni":"ISAE University","ucret":6800,"kira":450,"yasam":47.5,"toplam":12200,"pop":0},{"ulke":"Ekvador","uni":"Universidad de Cuenca","ucret":7200,"kira":320,"yasam":42.5,"toplam":11040,"pop":0},{"ulke":"Lübnan","uni":"Lebanese University","ucret":2000,"kira":400,"yasam":52.1,"toplam":6800,"pop":0},{"ulke":"Bahreyn","uni":"Bahrain Polytechnic","ucret":6500,"kira":600,"yasam":61.8,"toplam":13700,"pop":0},{"ulke":"Uruguay","uni":"Universidad Catolica","ucret":7000,"kira":400,"yasam":49.2,"toplam":11800,"pop":0},{"ulke":"Bulgaristan","uni":"Technical University Varna","ucret":3100,"kira":330,"yasam":44.2,"toplam":7060,"pop":0},{"ulke":"Gana","uni":"University of Cape Coast","ucret":4000,"kira":230,"yasam":38.5,"toplam":6760,"pop":0},{"ulke":"Cezayir","uni":"University of Constantine","ucret":1300,"kira":200,"yasam":35.8,"toplam":3700,"pop":0},{"ulke":"Panama","uni":"Universidad Latina","ucret":6500,"kira":400,"yasam":45.8,"toplam":11300,"pop":0},{"ulke":"Ekvador","uni":"UTPL","ucret":6800,"kira":300,"yasam":41.2,"toplam":10400,"pop":0},{"ulke":"Lübnan","uni":"Holy Spirit University","ucret":16000,"kira":450,"yasam":54.5,"toplam":21400,"pop":0},{"ulke":"Bahreyn","uni":"Arabian Gulf University","ucret":9000,"kira":620,"yasam":62.4,"toplam":16440,"pop":0},{"ulke":"Uruguay","uni":"UTEC","ucret":0,"kira":350,"yasam":47.8,"toplam":4200,"pop":0},{"ulke":"Bulgaristan","uni":"Burgas Free University","ucret":2900,"kira":320,"yasam":43.5,"toplam":6740,"pop":0},{"ulke":"Gana","uni":"University for Development","ucret":3800,"kira":200,"yasam":36.8,"toplam":6200,"pop":0},{"ulke":"Cezayir","uni":"Badji Mokhtar University","ucret":1000,"kira":180,"yasam":34.5,"toplam":3160,"pop":0},{"ulke":"Panama","uni":"Quality Leadership University","ucret":6200,"kira":380,"yasam":44.2,"toplam":10760,"pop":0},{"ulke":"Ekvador","uni":"Universidad Tecnica","ucret":6500,"kira":280,"yasam":40.5,"toplam":9860,"pop":0},{"ulke":"Lübnan","uni":"Lebanese International","ucret":15000,"kira":420,"yasam":51.8,"toplam":20040,"pop":0},{"ulke":"Bahreyn","uni":"Applied Science University","ucret":7500,"kira":580,"yasam":61.5,"toplam":14460,"pop":0},{"ulke":"Uruguay","uni":"Universidad de Paysandu","ucret":0,"kira":330,"yasam":46.5,"toplam":3960,"pop":0},{"ulke":"Bulgaristan","uni":"University of Ruse","ucret":3300,"kira":300,"yasam":42.8,"toplam":6900,"pop":0},{"ulke":"Gana","uni":"University of Health Sciences","ucret":3500,"kira":180,"yasam":35.4,"toplam":5660,"pop":0},{"ulke":"Cezayir","uni":"University of Tlemcen","ucret":900,"kira":160,"yasam":33.2,"toplam":2820,"pop":0},{"ulke":"Panama","uni":"Universidad Metropolitana","ucret":6000,"kira":350,"yasam":43.5,"toplam":10200,"pop":0},{"ulke":"Bangladeş","uni":"Bangladesh University of Engineering","ucret":2500,"kira":250,"yasam":42.5,"toplam":5500,"pop":0},{"ulke":"Kuveyt","uni":"Kuwait University","ucret":3500,"kira":800,"yasam":71.2,"toplam":13100,"pop":0},{"ulke":"Ukrayna","uni":"Igor Sikorsky Kyiv Polytechnic","ucret":3800,"kira":400,"yasam":45.8,"toplam":8600,"pop":0},{"ulke":"Slovenya","uni":"University of Ljubljana","ucret":4500,"kira":500,"yasam":62.4,"toplam":10500,"pop":0},{"ulke":"Sırbistan","uni":"University of Belgrade","ucret":2800,"kira":350,"yasam":48.5,"toplam":7000,"pop":0},{"ulke":"İran","uni":"Sharif University of Technology","ucret":3000,"kira":400,"yasam":51.2,"toplam":7800,"pop":0},{"ulke":"Özbekistan","uni":"INHA University Tashkent","ucret":4200,"kira":300,"yasam":44.5,"toplam":7800,"pop":0},{"ulke":"El Salvador","uni":"Universidad Don Bosco","ucret":5500,"kira":400,"yasam":46.8,"toplam":10300,"pop":0},{"ulke":"Bangladeş","uni":"CUET","ucret":2200,"kira":200,"yasam":39.8,"toplam":4600,"pop":0},{"ulke":"Kuveyt","uni":"American University Kuwait","ucret":15000,"kira":750,"yasam":68.5,"toplam":24000,"pop":0},{"ulke":"Ukrayna","uni":"Lviv Polytechnic","ucret":3500,"kira":350,"yasam":43.2,"toplam":7700,"pop":0},{"ulke":"Slovenya","uni":"University of Maribor","ucret":4200,"kira":450,"yasam":58.5,"toplam":9600,"pop":0},{"ulke":"Sırbistan","uni":"University of Novi Sad","ucret":2600,"kira":320,"yasam":45.8,"toplam":6440,"pop":0},{"ulke":"İran","uni":"Isfahan University of Technology","ucret":2800,"kira":350,"yasam":48.5,"toplam":7000,"pop":0},{"ulke":"Özbekistan","uni":"Samarkand State University","ucret":3800,"kira":250,"yasam":41.2,"toplam":6800,"pop":0},{"ulke":"El Salvador","uni":"Universidad Catolica","ucret":5000,"kira":350,"yasam":44.5,"toplam":9200,"pop":0},{"ulke":"Bangladeş","uni":"Khulna University","ucret":2100,"kira":180,"yasam":38.5,"toplam":4260,"pop":0},{"ulke":"Kuveyt","uni":"Gulf University for Science","ucret":14000,"kira":700,"yasam":66.8,"toplam":22400,"pop":0},{"ulke":"Ukrayna","uni":"Kharkiv Polytechnic","ucret":3400,"kira":330,"yasam":42.5,"toplam":7360,"pop":0},{"ulke":"Slovenya","uni":"University of Primorska","ucret":4000,"kira":420,"yasam":57.2,"toplam":9040,"pop":0},{"ulke":"Sırbistan","uni":"University of Nis","ucret":2500,"kira":300,"yasam":44.2,"toplam":6100,"pop":0},{"ulke":"İran","uni":"Ferdowsi University","ucret":2900,"kira":320,"yasam":47.8,"toplam":6740,"pop":0},{"ulke":"Özbekistan","uni":"Bukhara State University","ucret":3500,"kira":220,"yasam":39.8,"toplam":6140,"pop":0},{"ulke":"El Salvador","uni":"Universidad de Oriente","ucret":4800,"kira":320,"yasam":43.2,"toplam":8640,"pop":0},{"ulke":"Bangladeş","uni":"RUET","ucret":2000,"kira":170,"yasam":37.2,"toplam":4040,"pop":0},{"ulke":"Kuveyt","uni":"Australian College Kuwait","ucret":13500,"kira":680,"yasam":65.4,"toplam":21660,"pop":0},{"ulke":"Ukrayna","uni":"Odesa Polytechnic","ucret":3600,"kira":320,"yasam":41.8,"toplam":7440,"pop":0},{"ulke":"Slovenya","uni":"University of Nova Gorica","ucret":4100,"kira":400,"yasam":56.5,"toplam":8900,"pop":0},{"ulke":"Sırbistan","uni":"University of Kragujevac","ucret":2400,"kira":280,"yasam":43.5,"toplam":5760,"pop":0},{"ulke":"İran","uni":"Shiraz University","ucret":2700,"kira":300,"yasam":46.8,"toplam":6300,"pop":0},{"ulke":"Özbekistan","uni":"Namangan Institute","ucret":3400,"kira":200,"yasam":38.5,"toplam":5800,"pop":0},{"ulke":"El Salvador","uni":"Universidad de Sonsonate","ucret":4500,"kira":300,"yasam":42.8,"toplam":8100,"pop":0},{"ulke":"Bangladeş","uni":"SUST","ucret":2300,"kira":160,"yasam":36.8,"toplam":4220,"pop":0},{"ulke":"Kuveyt","uni":"ACK","ucret":13000,"kira":650,"yasam":64.5,"toplam":20800,"pop":0},{"ulke":"Ukrayna","uni":"Dnipro Polytechnic","ucret":3300,"kira":300,"yasam":40.5,"toplam":6900,"pop":0},{"ulke":"Slovenya","uni":"Faculty of Logistics","ucret":3900,"kira":380,"yasam":55.4,"toplam":8460,"pop":0},{"ulke":"Sırbistan","uni":"University of Subotica","ucret":2300,"kira":270,"yasam":42.8,"toplam":5540,"pop":0},{"ulke":"İran","uni":"University of Tabriz","ucret":2600,"kira":280,"yasam":45.5,"toplam":5960,"pop":0},{"ulke":"Özbekistan","uni":"Andijan State University","ucret":3200,"kira":180,"yasam":37.8,"toplam":5360,"pop":0},{"ulke":"El Salvador","uni":"ITCA-FEPADE","ucret":4200,"kira":280,"yasam":42.1,"toplam":7560,"pop":0},{"ulke":"Malezya","uni":"University of Malaya","ucret":8500,"kira":500,"yasam":55.4,"toplam":14500,"pop":1},{"ulke":"Suudi Arabistan","uni":"King Saud University","ucret":5000,"kira":800,"yasam":72.5,"toplam":14600,"pop":0},{"ulke":"ABD","uni":"Harvard University","ucret":58000,"kira":2200,"yasam":82.1,"toplam":84400,"pop":17},{"ulke":"İngiltere","uni":"Imperial College","ucret":42000,"kira":1800,"yasam":75.3,"toplam":63600,"pop":6},{"ulke":"İspanya","uni":"Universidad Politecnica","ucret":3500,"kira":1100,"yasam":71.4,"toplam":16700,"pop":1},{"ulke":"Malezya","uni":"USM","ucret":7500,"kira":450,"yasam":52.1,"toplam":12900,"pop":1},{"ulke":"Suudi Arabistan","uni":"King Abdulaziz University","ucret":4800,"kira":750,"yasam":70.2,"toplam":13800,"pop":0},{"ulke":"İngiltere","uni":"University of Cambridge","ucret":45000,"kira":1600,"yasam":71.5,"toplam":64200,"pop":6},{"ulke":"İspanya","uni":"Universitat de Barcelona","ucret":3800,"kira":1000,"yasam":73.6,"toplam":15800,"pop":1},{"ulke":"Fransa","uni":"Ã‰cole Normale SupÃ©rieure","ucret":4200,"kira":1200,"yasam":75.6,"toplam":18600,"pop":1},{"ulke":"Malezya","uni":"UTM","ucret":8000,"kira":400,"yasam":51.8,"toplam":12800,"pop":1},{"ulke":"Suudi Arabistan","uni":"KFUPM","ucret":4500,"kira":700,"yasam":68.5,"toplam":12900,"pop":0},{"ulke":"İspanya","uni":"Universidad de Valencia","ucret":3200,"kira":800,"yasam":68.5,"toplam":12800,"pop":1},{"ulke":"Fransa","uni":"INSA Toulouse","ucret":4300,"kira":1000,"yasam":72.1,"toplam":16300,"pop":1},{"ulke":"Malezya","uni":"UNIMAS","ucret":7000,"kira":380,"yasam":49.5,"toplam":11560,"pop":1},{"ulke":"Suudi Arabistan","uni":"Islamic University","ucret":4200,"kira":650,"yasam":65.4,"toplam":12000,"pop":0},{"ulke":"ABD","uni":"Massachusetts","ucret":56000,"kira":2100,"yasam":82.1,"toplam":81200,"pop":17},{"ulke":"Fransa","uni":"Aix-Marseille University","ucret":4100,"kira":1100,"yasam":73.5,"toplam":17300,"pop":1},{"ulke":"Malezya","uni":"Multimedia University","ucret":7800,"kira":450,"yasam":53.2,"toplam":13200,"pop":1},{"ulke":"Suudi Arabistan","uni":"Imam Abdulrahman University","ucret":4600,"kira":680,"yasam":67.8,"toplam":12760,"pop":0},{"ulke":"İspanya","uni":"Universidad de Granada","ucret":2800,"kira":700,"yasam":64.5,"toplam":11200,"pop":1},{"ulke":"Malezya","uni":"UKM","ucret":7200,"kira":420,"yasam":51.5,"toplam":12240,"pop":1},{"ulke":"Suudi Arabistan","uni":"Taif University","ucret":4400,"kira":600,"yasam":64.5,"toplam":11600,"pop":0},{"ulke":"Malezya","uni":"UTeM","ucret":7500,"kira":400,"yasam":50.2,"toplam":12300,"pop":1},{"ulke":"Suudi Arabistan","uni":"University of Tabuk","ucret":4100,"kira":580,"yasam":63.2,"toplam":11060,"pop":0},{"ulke":"Malezya","uni":"UiTM","ucret":7100,"kira":430,"yasam":51.8,"toplam":12260,"pop":1},{"ulke":"Suudi Arabistan","uni":"Umm Al-Qura University","ucret":4300,"kira":650,"yasam":65.8,"toplam":12100,"pop":0},{"ulke":"ABD","uni":"Stanford University","ucret":55000,"kira":2400,"yasam":95.2,"toplam":83800,"pop":17},{"ulke":"Malezya","uni":"USIM","ucret":6800,"kira":400,"yasam":50.5,"toplam":11600,"pop":1},{"ulke":"Suudi Arabistan","uni":"King Faisal University","ucret":4200,"kira":600,"yasam":64.2,"toplam":11400,"pop":0}],"ulkeler":[{"ulke":"ABD","n":68,"nuni":40,"pop":17,"ucret_med":49000.0,"kira_med":1800.0,"toplam_med":70050.0,"yasam_med":74.5,"ucret_ort":46940,"kira_ort":1837,"toplam_ort":68981,"ucretsiz":0},{"ulke":"Singapur","n":18,"nuni":11,"pop":2,"ucret_med":35000.0,"kira_med":1500.0,"toplam_med":52000.0,"yasam_med":81.1,"ucret_ort":34172,"kira_ort":1394,"toplam_ort":50906,"ucretsiz":0},{"ulke":"Avustralya","n":86,"nuni":23,"pop":13,"ucret_med":34100.0,"kira_med":1400.0,"toplam_med":50100.0,"yasam_med":68.2,"ucret_ort":34610,"kira_ort":1362,"toplam_ort":50950,"ucretsiz":0},{"ulke":"İngiltere","n":86,"nuni":56,"pop":6,"ucret_med":29800.0,"kira_med":1100.0,"toplam_med":43750.0,"yasam_med":69.9,"ucret_ort":29881,"kira_ort":1231,"toplam_ort":44651,"ucretsiz":0},{"ulke":"Yeni Zelanda","n":9,"nuni":8,"pop":1,"ucret_med":29000.0,"kira_med":950.0,"toplam_med":42400.0,"yasam_med":72.4,"ucret_ort":29333,"kira_ort":1006,"toplam_ort":41400,"ucretsiz":0},{"ulke":"Kanada","n":76,"nuni":26,"pop":5,"ucret_med":28500.0,"kira_med":1200.0,"toplam_med":42350.0,"yasam_med":62.5,"ucret_ort":29457,"kira_ort":1168,"toplam_ort":43470,"ucretsiz":0},{"ulke":"Hong Kong","n":1,"nuni":1,"pop":1,"ucret_med":22000.0,"kira_med":1500.0,"toplam_med":40000.0,"yasam_med":78.6,"ucret_ort":22000,"kira_ort":1500,"toplam_ort":40000,"ucretsiz":0},{"ulke":"BAE","n":8,"nuni":8,"pop":0,"ucret_med":24500.0,"kira_med":850.0,"toplam_med":34900.0,"yasam_med":67.0,"ucret_ort":24688,"kira_ort":888,"toplam_ort":35338,"ucretsiz":0},{"ulke":"İrlanda","n":10,"nuni":8,"pop":2,"ucret_med":15650.0,"kira_med":1050.0,"toplam_med":28250.0,"yasam_med":70.7,"ucret_ort":17890,"kira_ort":1130,"toplam_ort":31450,"ucretsiz":0},{"ulke":"İsrail","n":1,"nuni":1,"pop":1,"ucret_med":12000.0,"kira_med":1200.0,"toplam_med":26400.0,"yasam_med":76.2,"ucret_ort":12000,"kira_ort":1200,"toplam_ort":26400,"ucretsiz":0},{"ulke":"Hollanda","n":21,"nuni":13,"pop":3,"ucret_med":14500.0,"kira_med":950.0,"toplam_med":25400.0,"yasam_med":70.5,"ucret_ort":13524,"kira_ort":1005,"toplam_ort":25581,"ucretsiz":0},{"ulke":"İsviçre","n":20,"nuni":13,"pop":2,"ucret_med":1460.0,"kira_med":1700.0,"toplam_med":21840.0,"yasam_med":90.2,"ucret_ort":1460,"kira_ort":1690,"toplam_ort":21740,"ucretsiz":0},{"ulke":"Kuveyt","n":5,"nuni":5,"pop":0,"ucret_med":13500.0,"kira_med":700.0,"toplam_med":21660.0,"yasam_med":66.8,"ucret_ort":11800,"kira_ort":716,"toplam_ort":20392,"ucretsiz":0},{"ulke":"Lübnan","n":5,"nuni":5,"pop":0,"ucret_med":16000.0,"kira_med":450.0,"toplam_med":21400.0,"yasam_med":54.5,"ucret_ort":14200,"kira_ort":474,"toplam_ort":19888,"ucretsiz":0},{"ulke":"Çekya","n":1,"nuni":1,"pop":1,"ucret_med":9800.0,"kira_med":650.0,"toplam_med":17600.0,"yasam_med":54.6,"ucret_ort":9800,"kira_ort":650,"toplam_ort":17600,"ucretsiz":0},{"ulke":"Japonya","n":12,"nuni":12,"pop":12,"ucret_med":7850.0,"kira_med":675.0,"toplam_med":16150.0,"yasam_med":66.6,"ucret_ort":7875,"kira_ort":758,"toplam_ort":16975,"ucretsiz":0},{"ulke":"Fransa","n":22,"nuni":17,"pop":1,"ucret_med":4200.0,"kira_med":975.0,"toplam_med":15800.0,"yasam_med":70.7,"ucret_ort":4727,"kira_ort":1027,"toplam_ort":17055,"ucretsiz":0},{"ulke":"Bahreyn","n":5,"nuni":5,"pop":0,"ucret_med":7500.0,"kira_med":620.0,"toplam_med":15400.0,"yasam_med":62.4,"ucret_ort":7600,"kira_ort":630,"toplam_ort":15160,"ucretsiz":0},{"ulke":"Çin","n":12,"nuni":11,"pop":1,"ucret_med":7650.0,"kira_med":625.0,"toplam_med":15150.0,"yasam_med":47.1,"ucret_ort":7583,"kira_ort":614,"toplam_ort":14953,"ucretsiz":0},{"ulke":"İtalya","n":9,"nuni":8,"pop":1,"ucret_med":3500.0,"kira_med":950.0,"toplam_med":15000.0,"yasam_med":69.8,"ucret_ort":3611,"kira_ort":978,"toplam_ort":15344,"ucretsiz":0},{"ulke":"Lüksemburg","n":7,"nuni":7,"pop":0,"ucret_med":400.0,"kira_med":1150.0,"toplam_med":14200.0,"yasam_med":78.4,"ucret_ort":400,"kira_ort":1186,"toplam_ort":14629,"ucretsiz":0},{"ulke":"Kıbrıs","n":6,"nuni":6,"pop":0,"ucret_med":7700.0,"kira_med":490.0,"toplam_med":13830.0,"yasam_med":60.6,"ucret_ort":7750,"kira_ort":502,"toplam_ort":13770,"ucretsiz":0},{"ulke":"Tayvan","n":1,"nuni":1,"pop":1,"ucret_med":5200.0,"kira_med":700.0,"toplam_med":13600.0,"yasam_med":62.8,"ucret_ort":5200,"kira_ort":700,"toplam_ort":13600,"ucretsiz":0},{"ulke":"Belçika","n":9,"nuni":8,"pop":1,"ucret_med":3500.0,"kira_med":800.0,"toplam_med":13300.0,"yasam_med":70.5,"ucret_ort":3567,"kira_ort":828,"toplam_ort":13500,"ucretsiz":0},{"ulke":"Tayland","n":8,"nuni":6,"pop":0,"ucret_med":9750.0,"kira_med":290.0,"toplam_med":13230.0,"yasam_med":44.0,"ucret_ort":9850,"kira_ort":325,"toplam_ort":13750,"ucretsiz":0},{"ulke":"Danimarka","n":15,"nuni":6,"pop":2,"ucret_med":0.0,"kira_med":1000.0,"toplam_med":13200.0,"yasam_med":73.2,"ucret_ort":1720,"kira_ort":1103,"toplam_ort":14960,"ucretsiz":12},{"ulke":"Güney Kore","n":23,"nuni":20,"pop":3,"ucret_med":5900.0,"kira_med":600.0,"toplam_med":13140.0,"yasam_med":73.2,"ucret_ort":5983,"kira_ort":670,"toplam_ort":14017,"ucretsiz":0},{"ulke":"Güney Afrika","n":1,"nuni":1,"pop":0,"ucret_med":5900.0,"kira_med":600.0,"toplam_med":13100.0,"yasam_med":49.2,"ucret_ort":5900,"kira_ort":600,"toplam_ort":13100,"ucretsiz":0},{"ulke":"Portekiz","n":9,"nuni":8,"pop":1,"ucret_med":6000.0,"kira_med":550.0,"toplam_med":12800.0,"yasam_med":57.8,"ucret_ort":5900,"kira_ort":587,"toplam_ort":12940,"ucretsiz":0},{"ulke":"İspanya","n":13,"nuni":13,"pop":1,"ucret_med":3200.0,"kira_med":800.0,"toplam_med":12800.0,"yasam_med":67.8,"ucret_ort":3215,"kira_ort":846,"toplam_ort":13369,"ucretsiz":0},{"ulke":"Suudi Arabistan","n":10,"nuni":9,"pop":0,"ucret_med":4450.0,"kira_med":665.0,"toplam_med":12430.0,"yasam_med":65.6,"ucret_ort":4790,"kira_ort":681,"toplam_ort":12962,"ucretsiz":0},{"ulke":"Malezya","n":10,"nuni":9,"pop":1,"ucret_med":7350.0,"kira_med":425.0,"toplam_med":12280.0,"yasam_med":51.6,"ucret_ort":7220,"kira_ort":433,"toplam_ort":12416,"ucretsiz":0},{"ulke":"Norveç","n":11,"nuni":10,"pop":1,"ucret_med":0.0,"kira_med":1000.0,"toplam_med":12000.0,"yasam_med":71.2,"ucret_ort":0,"kira_ort":1036,"toplam_ort":12436,"ucretsiz":11},{"ulke":"İzlanda","n":6,"nuni":6,"pop":0,"ucret_med":0.0,"kira_med":975.0,"toplam_med":11700.0,"yasam_med":81.7,"ucret_ort":0,"kira_ort":1017,"toplam_ort":12200,"ucretsiz":6},{"ulke":"Almanya","n":31,"nuni":22,"pop":13,"ucret_med":0.0,"kira_med":950.0,"toplam_med":11400.0,"yasam_med":67.8,"ucret_ort":189,"kira_ort":950,"toplam_ort":11589,"ucretsiz":19},{"ulke":"Panama","n":5,"nuni":5,"pop":0,"ucret_med":6500.0,"kira_med":400.0,"toplam_med":11300.0,"yasam_med":45.8,"ucret_ort":6600,"kira_ort":436,"toplam_ort":11832,"ucretsiz":0},{"ulke":"İsveç","n":10,"nuni":8,"pop":2,"ucret_med":0.0,"kira_med":925.0,"toplam_med":11100.0,"yasam_med":70.5,"ucret_ort":0,"kira_ort":925,"toplam_ort":11100,"ucretsiz":10},{"ulke":"Ekvador","n":5,"nuni":5,"pop":0,"ucret_med":7200.0,"kira_med":320.0,"toplam_med":11040.0,"yasam_med":42.5,"ucret_ort":7360,"kira_ort":330,"toplam_ort":11320,"ucretsiz":0},{"ulke":"Avusturya","n":9,"nuni":9,"pop":1,"ucret_med":1500.0,"kira_med":780.0,"toplam_med":10860.0,"yasam_med":70.4,"ucret_ort":1500,"kira_ort":794,"toplam_ort":11033,"ucretsiz":0},{"ulke":"Peru","n":6,"nuni":6,"pop":0,"ucret_med":7100.0,"kira_med":270.0,"toplam_med":10400.0,"yasam_med":40.1,"ucret_ort":7250,"kira_ort":288,"toplam_ort":10710,"ucretsiz":0},{"ulke":"Finlandiya","n":11,"nuni":9,"pop":1,"ucret_med":0.0,"kira_med":800.0,"toplam_med":9600.0,"yasam_med":70.2,"ucret_ort":0,"kira_ort":859,"toplam_ort":10309,"ucretsiz":11},{"ulke":"Rusya","n":9,"nuni":8,"pop":0,"ucret_med":4600.0,"kira_med":400.0,"toplam_med":9500.0,"yasam_med":52.3,"ucret_ort":4622,"kira_ort":456,"toplam_ort":10089,"ucretsiz":0},{"ulke":"Polonya","n":8,"nuni":7,"pop":1,"ucret_med":2650.0,"kira_med":565.0,"toplam_med":9430.0,"yasam_med":50.9,"ucret_ort":2762,"kira_ort":566,"toplam_ort":9558,"ucretsiz":0},{"ulke":"Macaristan","n":8,"nuni":8,"pop":0,"ucret_med":5450.0,"kira_med":335.0,"toplam_med":9370.0,"yasam_med":46.2,"ucret_ort":5600,"kira_ort":356,"toplam_ort":9875,"ucretsiz":0},{"ulke":"Slovenya","n":5,"nuni":5,"pop":0,"ucret_med":4100.0,"kira_med":420.0,"toplam_med":9040.0,"yasam_med":57.2,"ucret_ort":4140,"kira_ort":430,"toplam_ort":9300,"ucretsiz":0},{"ulke":"El Salvador","n":5,"nuni":5,"pop":0,"ucret_med":4800.0,"kira_med":320.0,"toplam_med":8640.0,"yasam_med":43.2,"ucret_ort":4800,"kira_ort":330,"toplam_ort":8760,"ucretsiz":0},{"ulke":"Vietnam","n":1,"nuni":1,"pop":0,"ucret_med":3200.0,"kira_med":450.0,"toplam_med":8600.0,"yasam_med":43.6,"ucret_ort":3200,"kira_ort":450,"toplam_ort":8600,"ucretsiz":0},{"ulke":"Dominik Cumhuriyeti","n":5,"nuni":5,"pop":0,"ucret_med":5000.0,"kira_med":280.0,"toplam_med":8360.0,"yasam_med":38.5,"ucret_ort":5160,"kira_ort":288,"toplam_ort":8616,"ucretsiz":0},{"ulke":"Meksika","n":9,"nuni":8,"pop":0,"ucret_med":3500.0,"kira_med":500.0,"toplam_med":8300.0,"yasam_med":45.4,"ucret_ort":5700,"kira_ort":507,"toplam_ort":11780,"ucretsiz":0},{"ulke":"Hırvatistan","n":6,"nuni":6,"pop":0,"ucret_med":3550.0,"kira_med":385.0,"toplam_med":8070.0,"yasam_med":54.6,"ucret_ort":3583,"kira_ort":390,"toplam_ort":8263,"ucretsiz":0},{"ulke":"Ukrayna","n":5,"nuni":5,"pop":0,"ucret_med":3500.0,"kira_med":330.0,"toplam_med":7440.0,"yasam_med":42.5,"ucret_ort":3520,"kira_ort":340,"toplam_ort":7600,"ucretsiz":0},{"ulke":"Nijerya","n":1,"nuni":1,"pop":0,"ucret_med":2500.0,"kira_med":400.0,"toplam_med":7300.0,"yasam_med":40.2,"ucret_ort":2500,"kira_ort":400,"toplam_ort":7300,"ucretsiz":0},{"ulke":"Endonezya","n":8,"nuni":7,"pop":0,"ucret_med":3900.0,"kira_med":265.0,"toplam_med":7080.0,"yasam_med":40.9,"ucret_ort":3900,"kira_ort":299,"toplam_ort":7485,"ucretsiz":0},{"ulke":"Bulgaristan","n":5,"nuni":5,"pop":0,"ucret_med":3200.0,"kira_med":330.0,"toplam_med":7060.0,"yasam_med":44.2,"ucret_ort":3200,"kira_ort":340,"toplam_ort":7280,"ucretsiz":0},{"ulke":"Kolombiya","n":6,"nuni":6,"pop":0,"ucret_med":3500.0,"kira_med":295.0,"toplam_med":6980.0,"yasam_med":36.1,"ucret_ort":3550,"kira_ort":313,"toplam_ort":7310,"ucretsiz":0},{"ulke":"Gana","n":5,"nuni":5,"pop":0,"ucret_med":4000.0,"kira_med":230.0,"toplam_med":6760.0,"yasam_med":38.5,"ucret_ort":4000,"kira_ort":232,"toplam_ort":6784,"ucretsiz":0},{"ulke":"İran","n":5,"nuni":5,"pop":0,"ucret_med":2800.0,"kira_med":320.0,"toplam_med":6740.0,"yasam_med":47.8,"ucret_ort":2800,"kira_ort":330,"toplam_ort":6760,"ucretsiz":0},{"ulke":"Romanya","n":7,"nuni":7,"pop":0,"ucret_med":2200.0,"kira_med":350.0,"toplam_med":6300.0,"yasam_med":41.8,"ucret_ort":2186,"kira_ort":361,"toplam_ort":6523,"ucretsiz":0},{"ulke":"Özbekistan","n":5,"nuni":5,"pop":0,"ucret_med":3500.0,"kira_med":220.0,"toplam_med":6140.0,"yasam_med":39.8,"ucret_ort":3620,"kira_ort":230,"toplam_ort":6380,"ucretsiz":0},{"ulke":"Sırbistan","n":5,"nuni":5,"pop":0,"ucret_med":2500.0,"kira_med":300.0,"toplam_med":6100.0,"yasam_med":44.2,"ucret_ort":2520,"kira_ort":304,"toplam_ort":6168,"ucretsiz":0},{"ulke":"Türkiye","n":9,"nuni":8,"pop":0,"ucret_med":1200.0,"kira_med":400.0,"toplam_med":6100.0,"yasam_med":46.5,"ucret_ort":1278,"kira_ort":414,"toplam_ort":6251,"ucretsiz":0},{"ulke":"Yunanistan","n":14,"nuni":12,"pop":0,"ucret_med":0.0,"kira_med":465.0,"toplam_med":5580.0,"yasam_med":60.9,"ucret_ort":179,"kira_ort":483,"toplam_ort":5973,"ucretsiz":13},{"ulke":"Uruguay","n":5,"nuni":5,"pop":0,"ucret_med":0.0,"kira_med":380.0,"toplam_med":5400.0,"yasam_med":48.5,"ucret_ort":2700,"kira_ort":382,"toplam_ort":7284,"ucretsiz":3},{"ulke":"Hindistan","n":8,"nuni":7,"pop":1,"ucret_med":1850.0,"kira_med":290.0,"toplam_med":5330.0,"yasam_med":43.6,"ucret_ort":1900,"kira_ort":312,"toplam_ort":5650,"ucretsiz":0},{"ulke":"Fas","n":6,"nuni":6,"pop":0,"ucret_med":1950.0,"kira_med":270.0,"toplam_med":5240.0,"yasam_med":40.1,"ucret_ort":1950,"kira_ort":280,"toplam_ort":5310,"ucretsiz":0},{"ulke":"Brezilya","n":8,"nuni":7,"pop":0,"ucret_med":0.0,"kira_med":425.0,"toplam_med":5100.0,"yasam_med":49.3,"ucret_ort":1000,"kira_ort":466,"toplam_ort":6595,"ucretsiz":7},{"ulke":"Mısır","n":7,"nuni":7,"pop":0,"ucret_med":2200.0,"kira_med":200.0,"toplam_med":4600.0,"yasam_med":34.8,"ucret_ort":4700,"kira_ort":233,"toplam_ort":7494,"ucretsiz":0},{"ulke":"Bangladeş","n":5,"nuni":5,"pop":0,"ucret_med":2200.0,"kira_med":180.0,"toplam_med":4260.0,"yasam_med":38.5,"ucret_ort":2220,"kira_ort":192,"toplam_ort":4524,"ucretsiz":0},{"ulke":"Cezayir","n":5,"nuni":5,"pop":0,"ucret_med":1100.0,"kira_med":200.0,"toplam_med":3700.0,"yasam_med":35.8,"ucret_ort":1100,"kira_ort":202,"toplam_ort":3524,"ucretsiz":0},{"ulke":"Tunus","n":6,"nuni":6,"pop":0,"ucret_med":1400.0,"kira_med":175.0,"toplam_med":3550.0,"yasam_med":33.2,"ucret_ort":1400,"kira_ort":185,"toplam_ort":3620,"ucretsiz":0},{"ulke":"Arjantin","n":6,"nuni":5,"pop":0,"ucret_med":0.0,"kira_med":270.0,"toplam_med":3240.0,"yasam_med":39.1,"ucret_ort":0,"kira_ort":293,"toplam_ort":3520,"ucretsiz":6}]}</script>
+<script>
+(function(){
+'use strict';
+var DATA=JSON.parse(document.getElementById('veri').textContent);
+var P=DATA.programlar, U=DATA.ulkeler;
+var UM={}; U.forEach(function(u){UM[u.ulke]=u;});
+var BIG4=['ABD','İngiltere','Kanada','Avustralya'];
+var BUDGET=15000, MAXC=92000, MED=DATA.meta.medyan_toplam;
+var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+var $=function(s,r){return (r||document).querySelector(s);};
+var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s));};
+var NS='http://www.w3.org/2000/svg';
+function el(n,a,p){var e=document.createElementNS(NS,n);if(a)for(var k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e;}
+function fmt(n){return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,'.');}
+function usd(n){return fmt(n)+' $';}
+function dec(n,d){return n.toFixed(d).replace('.',',');}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function lin(d0,d1,r0,r1){return function(v){return r0+(v-d0)/(d1-d0)*(r1-r0);};}
+function median(a){var s=a.slice().sort(function(x,y){return x-y;});var m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2;}
+function pearson(xs,ys){var n=xs.length,mx=0,my=0,i;for(i=0;i<n;i++){mx+=xs[i];my+=ys[i];}mx/=n;my/=n;var sxy=0,sxx=0,syy=0;for(i=0;i<n;i++){sxy+=(xs[i]-mx)*(ys[i]-my);sxx+=Math.pow(xs[i]-mx,2);syy+=Math.pow(ys[i]-my,2);}return {r:sxy/Math.sqrt(sxx*syy),a:my-sxy/sxx*mx,b:sxy/sxx};}
+
+/* Türetilen sayılar */
+var minT=Math.min.apply(null,P.map(function(p){return p.toplam;}));
+var maxT=Math.max.apply(null,P.map(function(p){return p.toplam;}));
+var iMin=P.findIndex(function(p){return p.toplam===minT;});
+var iMax=P.findIndex(function(p){return p.toplam===maxT;});
+var usaT=P.filter(function(p){return p.ulke==='ABD';}).map(function(p){return p.toplam;});
+var usaMin=Math.min.apply(null,usaT);
+var iUsaMin=P.findIndex(function(p){return p.ulke==='ABD'&&p.toplam===usaMin;});
+var restMed=median(P.filter(function(p){return BIG4.indexOf(p.ulke)<0;}).map(function(p){return p.toplam;}));
+var big4Med=median(P.filter(function(p){return BIG4.indexOf(p.ulke)>=0;}).map(function(p){return p.toplam;}));
+var within15=P.filter(function(p){return p.toplam<=BUDGET;}).length;
+var under20=P.filter(function(p){return p.toplam<=20000;}).length;
+var fitAll=pearson(U.map(function(u){return u.pop;}),U.map(function(u){return u.toplam_med;}));
+var noUS=U.filter(function(u){return u.ulke!=='ABD';});
+var fitNoUS=pearson(noUS.map(function(u){return u.pop;}),noUS.map(function(u){return u.toplam_med;}));
+var zeroCount=U.filter(function(u){return u.pop===0;}).length;
+
+/* Adımlar */
+var L={
+ base:['base','Her nokta bir program'],
+};
+var STEPS={
+ i1:{view:'number',cap:'Ortanca öğrenci yılda yaklaşık '+fmt(MED)+' dolar öder',budget:{name:'Ortanca program',cost:MED},leg:[]},
+ i2:{view:'strip',dots:'base',cap:P.length+' program, her nokta bir üniversite programı',leg:[['base','Her nokta bir program']]},
+ i3:{view:'strip',dots:'extremes',ann:'extremes',cap:'En ucuz ile en pahalı arasında '+Math.round(maxT/minT)+' kat fark',leg:[['cool','En ucuz: '+usd(minT)],['hot','En pahalı: '+usd(maxT)]]},
+ i4:{view:'strip',dots:'within15',ann:'line15',cap:'Deniz\'in bütçesi '+P.length+' programdan '+within15+'\'ine yetiyor',leg:[['cool','Bütçeye sığan'],['mute','Sığmayan']]},
+ p1a:{view:'strip',dots:'big4',cap:'Dört ülke, veri setinin yüzde '+Math.round(100*P.filter(function(p){return BIG4.indexOf(p.ulke)>=0;}).length/P.length)+'\'sı',leg:[['hot','ABD, İngiltere, Kanada, Avustralya'],['mute','Diğer 67 ülke']]},
+ p1b:{view:'bars',cap:'Yıllık maliyet = okul ücreti + 12 × aylık kira',budget:{name:'ABD · ortanca',cost:UM['ABD'].toplam_med},leg:[['hotb','Okul ücreti (ortalama)'],['rent','12 × aylık kira (ortalama)']]},
+ p1c:{view:'strip',dots:'usa',ann:'usa',cap:'ABD\'de en ucuz program bile '+usd(usaMin),budget:{name:'ABD · en ucuz',cost:usaMin},leg:[['hot','ABD programları']]},
+ p1d:{view:'strip',dots:'big4',ann:'medians',cap:'Dört devin ortancası '+fmt(big4Med)+', diğer ülkelerinki '+fmt(restMed)+' dolar',budget:{name:'Diğer 67 ülke · ortanca',cost:restMed},leg:[['hot','Dört dev'],['mute','Diğer 67 ülke']]},
+ p2a:{view:'strip',dots:'under20',ann:'line20',cap:'Programların yüzde '+Math.round(100*under20/P.length)+'\'si 20.000 doların altında',leg:[['cool','20.000 $ ve altı'],['mute','Üstü']]},
+ p2b:{view:'bubble',mode:'yasam',cool:['Almanya','Japonya','Güney Kore'],labels:['Almanya','Japonya','Güney Kore'],lo:{'Japonya':[0,-10],'Almanya':[0,14]},ann:'h20',cap:'Balon büyüklüğü popülerlik puanını gösterir',budget:{name:'Almanya · ortanca',cost:UM['Almanya'].toplam_med},leg:[['cool','Düşük maliyetli, popüler ülkeler'],['mute','Diğer ülkeler']]},
+ p2c:{view:'bubble',mode:'ucret',free:true,hot:['İsviçre'],labels:['İsviçre','İzlanda','Danimarka','Arjantin','Almanya'],lo:{'Danimarka':[14,-13],'İzlanda':[14,3],'Almanya':[8,19]},ann:'h20',cap:'Okul ücreti sıfır olsa da toplam fatura değişebilir',budget:{name:'İsviçre · ortanca',cost:UM['İsviçre'].toplam_med},leg:[['ring','Okul ücreti sıfır olan programı olan ülke'],['hot','İsviçre']]},
+ p2d:{view:'bubble',mode:'yasam',cool:['Türkiye'],hot:['ABD'],labels:['Türkiye','ABD'],ann:'trus',cap:'Türkiye: ortanca 6.100 dolar, ABD\'nin 11,5 kat altında',budget:{name:'Türkiye · ortanca',cost:UM['Türkiye'].toplam_med},leg:[['cool','Türkiye'],['hot','ABD']]},
+ p3a:{view:'scatter',labels:['ABD'],ann:'zero',cap:'Her nokta bir ülke: popülerlik puanı ve ortanca maliyet',leg:[['mute','Ülke (71)']]},
+ p3b:{view:'scatter',labels:['ABD','Avustralya','İngiltere','Kanada'],ann:'trend',cap:'Popülerlik arttıkça maliyet artıyor (r = '+dec(fitAll.r,2)+')',leg:[['mute','Ülke']]},
+ p3c:{view:'scatter',labels:['Avustralya','İngiltere','Kanada'],ann:'trend trend2',dimUSA:true,cap:'ABD olmadan r = '+dec(fitNoUS.r,2),leg:[['mute','Ülke']]},
+ p3d:{view:'scatter',cool:['Almanya','Japonya','Güney Kore'],labels:['Almanya','Japonya','Güney Kore'],ann:'trend2',dimUSA:true,cap:'Çizginin altında kalanlar: Almanya, Japonya, Güney Kore',leg:[['cool','Çizginin altındaki üç ülke'],['mute','Diğer ülkeler']]},
+ p3e:{view:'duo',cap:'Almanya ve Avustralya: aynı puan, '+dec(UM['Avustralya'].toplam_med/UM['Almanya'].toplam_med,1)+' kat maliyet farkı',leg:[['cool','Almanya'],['hot','Avustralya']]}
+};
+var ORDER=$$('.step').map(function(s){return s.getAttribute('data-step');});
+
+/* Sahne */
+var stage=$('#stage'), svg=$('#chart'), canvas=$('#canvas'), tip=$('#tip');
+var W=0,H=0, S={}; // S: görünüm referansları
+var current=null;
+
+function clear(g){while(g.firstChild)g.removeChild(g.firstChild);}
+function lab(g,x,y,lines,o){o=o||{};var w=Math.max.apply(null,lines.map(function(s){return s.length;}))*6.3;var an=o.anchor||'start';
+  if(an==='start'&&x+w>W-6)an='end'; else if(an==='end'&&x-w<6)an='start';
+  var t=el('text',{x:x,y:y,'class':'t'+(o.strong?' strong':'')+(o.cls?' '+o.cls:''),'text-anchor':an},g);
+  lines.forEach(function(s,i){var ts=el('tspan',{x:x,dy:i?14:0},t);ts.textContent=s;});return t;}
+
+/* — Nokta dağılımı (beeswarm) — */
+function swarm(xs,r,base){
+  var D=2*r+0.5, order=xs.map(function(v,i){return i;}).sort(function(a,b){return xs[a]-xs[b];});
+  var pts=[], ys=new Array(xs.length);
+  order.forEach(function(i){
+    var xi=xs[i], nb=[];
+    for(var k=pts.length-1;k>=0;k--){if(xi-pts[k].x>=D)break;nb.push(pts[k]);}
+    var cands=[base-r];
+    nb.forEach(function(p){var dx=xi-p.x;cands.push(p.y-Math.sqrt(Math.max(0,D*D-dx*dx)));});
+    cands.sort(function(a,b){return b-a;});
+    var best=base-r;
+    for(var c=0;c<cands.length;c++){
+      var cy=cands[c];if(cy>base-r)continue;var ok=true;
+      for(var j=0;j<nb.length;j++){var dx=xi-nb[j].x,dy=cy-nb[j].y;if(dx*dx+dy*dy<D*D-0.01){ok=false;break;}}
+      if(ok){best=cy;break;}
+    }
+    pts.push({x:xi,y:best});ys[i]=best;
+  });
+  return ys;
+}
+function buildStrip(){
+  var g=$('#v-strip');clear(g);
+  var m={l:16,r:16,t:16,b:44}, base=H-m.b, x=lin(0,MAXC,m.l,W-m.r);
+  var aboveL=el('g',null,g), dotsG=el('g',null,g), aboveT=el('g',null,g);
+  [0,20000,40000,60000,80000].forEach(function(v){
+    el('line',{x1:x(v),x2:x(v),y1:base,y2:base+5,'class':'axl'},g);
+    var t=el('text',{x:x(v),y:base+18,'class':'tick','text-anchor':v===0?'start':'middle'},g);t.textContent=fmt(v);
+  });
+  el('line',{x1:m.l,x2:W-m.r,y1:base,y2:base,'class':'axl'},g);
+  var at=el('text',{x:W/2,y:base+36,'class':'t mid'},g);at.textContent='Yıllık toplam maliyet (USD)';
+  var xs=P.map(function(p){return x(p.toplam);});
+  var avail=base-m.t-64, r=Math.max(1.6,Math.min(4.4,W/170)), ys;
+  for(var it=0;it<14;it++){ys=swarm(xs,r,base);var top=Math.min.apply(null,ys)-r;if(base-top<=avail||r<=1.6)break;r-=0.15;}
+  S.dots=P.map(function(p,i){
+    var c=el('circle',{cx:xs[i],cy:ys[i],r:r,'class':'dot','data-tip':'<b>'+esc(p.uni)+'</b><br><span>'+esc(p.ulke)+' · '+usd(p.toplam)+' / yıl<br>Okul ücreti '+usd(p.ucret)+' + 12 × '+usd(p.kira)+' kira</span>'},dotsG);return c;});
+  S.sx=x;S.sbase=base;S.sr=r;S.sys=ys;S.sxs=xs;S.mt=m.t;
+  // çizgiler ve etiketler
+  function vline(v,cls){return el('line',{x1:x(v),x2:x(v),y1:m.t+6,y2:base,'class':'al '+cls},aboveL);}
+  vline(BUDGET,'a-line15');vline(20000,'a-line20');vline(restMed,'a-medians');vline(big4Med,'a-medians');
+  var tp=m.t+10;
+  var a=lab(aboveT,x(BUDGET)+6,tp,['Deniz\'in bütçesi: '+usd(BUDGET),within15+' / '+P.length+' program sığıyor'],{strong:false});a.setAttribute('class',a.getAttribute('class')+' at a-line15');
+  a=lab(aboveT,x(20000)+6,tp,['20.000 $',under20+' program bu çizginin solunda'],{});a.setAttribute('class',a.getAttribute('class')+' at a-line20');
+  a=lab(aboveT,x(restMed)+6,tp,['Diğer ülkeler','ortanca '+usd(restMed)],{});a.setAttribute('class',a.getAttribute('class')+' at a-medians');
+  a=lab(aboveT,x(big4Med)+6,tp,['Dört dev','ortanca '+usd(big4Med)],{});a.setAttribute('class',a.getAttribute('class')+' at a-medians');
+  a=lab(aboveT,xs[iMax]-4,ys[iMax]-30,['Columbia University',usd(maxT)],{anchor:'end'});a.setAttribute('class',a.getAttribute('class')+' at a-extremes');
+  a=lab(aboveT,xs[iMin]+6,ys[iMin]-30,['National University','of Cuyo · '+usd(minT)],{});a.setAttribute('class',a.getAttribute('class')+' at a-extremes');
+  a=lab(aboveT,xs[iUsaMin],ys[iUsaMin]-18,['ABD\'de en ucuz: '+usd(usaMin)],{anchor:'middle'});a.setAttribute('class',a.getAttribute('class')+' at a-usa');
+}
+function paintStrip(cfg){
+  var fn={
+    base:function(p){return '';},
+    extremes:function(p,i){return i===iMin?'cool big':i===iMax?'hot big':'dim';},
+    within15:function(p){return p.toplam<=BUDGET?'cool':'mute';},
+    big4:function(p){return BIG4.indexOf(p.ulke)>=0?'hot':'mute';},
+    usa:function(p,i){return p.ulke==='ABD'?(i===iUsaMin||i===iMax?'hot big':'hot'):'dim';},
+    under20:function(p){return p.toplam<=20000?'cool':'mute';}
+  }[cfg.dots];
+  S.dots.forEach(function(c,i){c.setAttribute('class','dot '+fn(P[i],i));});
+}
+
+/* — Yığılmış çubuklar — */
+var BARC=['ABD','Singapur','Avustralya','İngiltere','Kanada','Hollanda','Japonya','Almanya','Türkiye'];
+function buildBars(){
+  var g=$('#v-bars');clear(g);
+  var m={l:Math.min(96,W*.2),r:70,t:10,b:34}, n=BARC.length;
+  var maxv=Math.max.apply(null,BARC.map(function(k){return UM[k].toplam_ort;}));
+  var x=lin(0,Math.ceil(maxv/10000)*10000,m.l,W-m.r), rh=(H-m.t-m.b)/n, bh=Math.min(24,rh*.62);
+  [0,20000,40000,60000].forEach(function(v){
+    if(x(v)>W-m.r+2)return;
+    el('line',{x1:x(v),x2:x(v),y1:m.t,y2:H-m.b,'class':'grid'},g);
+    var t=el('text',{x:x(v),y:H-m.b+16,'class':'tick','text-anchor':'middle'},g);t.textContent=fmt(v);
+  });
+  var at=el('text',{x:(m.l+W-m.r)/2,y:H-6,'class':'t mid'},g);at.textContent='Yıllık maliyet (USD, ortalama)';
+  BARC.forEach(function(k,i){
+    var u=UM[k], y=m.t+i*rh+(rh-bh)/2, a=u.ucret_ort, b=12*u.kira_ort;
+    var t=el('text',{x:m.l-8,y:y+bh/2+4,'class':'t strong','text-anchor':'end'},g);t.textContent=k;
+    var w1=x(a)-x(0), w2=x(a+b)-x(a);
+    if(w1>0.5)el('rect',{x:x(0),y:y,width:Math.max(0,w1-1),height:bh,rx:2,fill:'var(--hot)','data-tip':'<b>'+k+'</b><br><span>Okul ücreti (ortalama): '+usd(a)+'</span>'},g);
+    el('rect',{x:x(a)+1,y:y,width:Math.max(0,w2-1),height:bh,rx:2,fill:'var(--rent)','data-tip':'<b>'+k+'</b><br><span>12 × aylık kira (ortalama): '+usd(b)+'</span>'},g);
+    var v=el('text',{x:x(a+b)+6,y:y+bh/2+4,'class':'t'},g);v.textContent=usd(a+b);
+  });
+}
+
+/* — Balon grafiği — */
+function buildBubble(){
+  var g=$('#v-bubble');clear(g);
+  var m={l:50,r:20,t:16,b:44}, sc=W<500?.8:1;
+  var y=lin(0,76000,H-m.b,m.t);
+  var xa={yasam:lin(30,95,m.l,W-m.r),ucret:lin(0,52000,m.l,W-m.r)};
+  [0,20000,40000,60000].forEach(function(v){
+    el('line',{x1:m.l,x2:W-m.r,y1:y(v),y2:y(v),'class':'grid'},g);
+    var t=el('text',{x:m.l-8,y:y(v)+4,'class':'tick','text-anchor':'end'},g);t.textContent=fmt(v);
+  });
+  var yt=el('text',{x:m.l-8,y:m.t-4,'class':'t','text-anchor':'start'},g);yt.textContent='Ortanca yıllık maliyet (USD)';yt.setAttribute('x',4);
+  var gy=el('g',{'class':'ax ax-yasam'},g), gu=el('g',{'class':'ax ax-ucret'},g);
+  [30,50,70,90].forEach(function(v){var t=el('text',{x:xa.yasam(v),y:H-m.b+18,'class':'tick','text-anchor':'middle'},gy);t.textContent=v;});
+  var t1=el('text',{x:W/2,y:H-6,'class':'t mid'},gy);t1.textContent='Yaşam endeksi (ortanca)';
+  [0,10000,20000,30000,40000,50000].forEach(function(v){var t=el('text',{x:xa.ucret(v),y:H-m.b+18,'class':'tick','text-anchor':'middle'},gu);t.textContent=fmt(v);});
+  var t2=el('text',{x:W/2,y:H-6,'class':'t mid'},gu);t2.textContent='Okul ücreti (ortanca, USD)';
+  var h20=el('line',{x1:m.l,x2:W-m.r,y1:y(20000),y2:y(20000),'class':'al a-h20'},g);
+  var h20t=el('text',{x:W-m.r-2,y:y(20000)-6,'class':'t at a-h20','text-anchor':'end'},g);h20t.textContent='20.000 $';
+  S.bub={};
+  var bg=el('g',null,g);
+  var FEAT=['Arjantin','İzlanda','Danimarka','Almanya','Japonya','Güney Kore','İsviçre','Türkiye','ABD'];
+  U.slice().sort(function(a,b){var fa=FEAT.indexOf(a.ulke),fb=FEAT.indexOf(b.ulke);if(fa>=0||fb>=0)return fa-fb;return b.pop-a.pop;}).forEach(function(u){
+    var G=el('g',{'class':'bub','data-tip':'<b>'+esc(u.ulke)+'</b><br><span>Ortanca maliyet '+usd(u.toplam_med)+'<br>Okul ücreti '+usd(u.ucret_med)+', kira '+usd(u.kira_med)+'/ay<br>Yaşam endeksi '+(u.yasam_med===null?'yok':dec(u.yasam_med,1))+'<br>Popülerlik '+u.pop+' · '+u.n+' program</span>'},bg);
+    var r=(4+2.3*Math.sqrt(u.pop))*sc;
+    el('circle',{r:r,cx:0,cy:0},G);
+    var t=el('text',{x:r+5,y:4,'class':'t strong'},G);t.textContent=u.ulke;
+    var py=y(u.toplam_med);
+    S.bub[u.ulke]={g:G,t:t,xs:{yasam:xa.yasam(u.yasam_med===null?30:u.yasam_med),ucret:xa.ucret(u.ucret_med)},y:py,r:r};
+    G.style.transform='translate('+S.bub[u.ulke].xs.yasam+'px,'+py+'px)';
+  });
+  var tr=el('line',{x1:0,y1:0,x2:0,y2:0,'class':'al a-trus'},g);
+  var trt=el('text',{x:0,y:0,'class':'t strong at a-trus','text-anchor':'middle'},g);
+  var a=S.bub['Türkiye'],b=S.bub['ABD'];
+  tr.setAttribute('x1',a.xs.yasam+a.r+2);tr.setAttribute('y1',a.y);tr.setAttribute('x2',b.xs.yasam-b.r-2);tr.setAttribute('y2',b.y);
+  trt.setAttribute('x',(a.xs.yasam+b.xs.yasam)/2-26);trt.setAttribute('y',(a.y+b.y)/2-10);
+  trt.textContent=dec(UM['ABD'].toplam_med/UM['Türkiye'].toplam_med,1)+' kat';
+}
+function paintBubble(cfg){
+  stage.setAttribute('data-mode',cfg.mode);
+  U.forEach(function(u){
+    var b=S.bub[u.ulke],cl=['bub'];
+    if(cfg.cool&&cfg.cool.indexOf(u.ulke)>=0)cl.push('cool');
+    if(cfg.hot&&cfg.hot.indexOf(u.ulke)>=0)cl.push('hot');
+    if(cfg.free&&u.ucretsiz>0){cl.push('ring');if(cl.indexOf('hot')<0)cl.push('cool');}
+    if(cfg.labels&&cfg.labels.indexOf(u.ulke)>=0)cl.push('lab');
+    if(cfg.hot&&cfg.hot.indexOf('ABD')>=0&&cl.indexOf('hot')<0&&cl.indexOf('cool')<0)cl.push('dim');
+    b.g.setAttribute('class',cl.join(' '));
+    b.g.style.transform='translate('+b.xs[cfg.mode]+'px,'+b.y+'px)';
+    var o=(cfg.lo&&cfg.lo[u.ulke])||[0,0];
+    b.t.setAttribute('x',b.r+5+o[0]);b.t.setAttribute('y',4+o[1]);
+  });
+}
+
+/* — Dağılım grafiği — */
+var SIDE={ABD:'l','Avustralya':'l','İngiltere':'r','Kanada':'l','Almanya':'r','Japonya':'l','Güney Kore':'r'};
+function buildScatter(){
+  var g=$('#v-scatter');clear(g);
+  var m={l:50,r:24,t:16,b:44}, sc=W<500?.85:1, r0=4.3*sc;
+  var x=lin(-1.6,18,m.l,W-m.r), y=lin(0,76000,H-m.b,m.t);
+  [0,20000,40000,60000].forEach(function(v){
+    el('line',{x1:m.l,x2:W-m.r,y1:y(v),y2:y(v),'class':'grid'},g);
+    var t=el('text',{x:m.l-8,y:y(v)+4,'class':'tick','text-anchor':'end'},g);t.textContent=fmt(v);
+  });
+  var yt=el('text',{x:4,y:m.t-4,'class':'t'},g);yt.textContent='Ortanca yıllık maliyet (USD)';
+  [0,3,6,9,12,15,17].forEach(function(v){
+    var t=el('text',{x:x(v),y:H-m.b+18,'class':'tick','text-anchor':'middle'},g);t.textContent=v;
+  });
+  var xt=el('text',{x:(m.l+W-m.r)/2,y:H-6,'class':'t mid'},g);xt.textContent='Popülerlik puanı (veri setindeki endeks)';
+  el('line',{x1:m.l,x2:W-m.r,y1:H-m.b,y2:H-m.b,'class':'axl'},g);
+  // çizgiler
+  function seg(fit,xa,xb,cls){return el('line',{x1:x(xa),y1:y(fit.a+fit.b*xa),x2:x(xb),y2:y(fit.a+fit.b*xb),'class':'trline '+cls},g);}
+  S.tr1=seg(fitAll,0,17,'a-trend');S.tr2=seg(fitNoUS,0,13,'a-trend2');
+  S.tr1.setAttribute('opacity',0);S.tr2.setAttribute('opacity',0);
+  // noktalar: aynı puandaki ülkeleri yatayda dağıt
+  var groups={};U.forEach(function(u){(groups[u.pop]=groups[u.pop]||[]).push(u);});
+  S.pt={};var pg=el('g',null,g);
+  Object.keys(groups).forEach(function(k){
+    var arr=groups[k].slice().sort(function(a,b){return a.toplam_med-b.toplam_med;}),placed=[],D=2*r0+1;
+    arr.forEach(function(u){
+      var py=y(u.toplam_med),off=0,tried=0,ok=false;
+      while(!ok&&tried<60){
+        var cand=(tried%2?1:-1)*Math.ceil(tried/2)*(D*.52);ok=true;
+        for(var j=0;j<placed.length;j++){var dx=cand-placed[j].o,dy=py-placed[j].y;if(dx*dx+dy*dy<D*D){ok=false;break;}}
+        if(ok)off=cand;tried++;
+      }
+      placed.push({o:off,y:py});
+      var px=x(u.pop)+off;
+      var G=el('g',{'class':'bub','data-tip':'<b>'+esc(u.ulke)+'</b><br><span>Popülerlik '+u.pop+' · ortanca maliyet '+usd(u.toplam_med)+'<br>'+u.n+' program</span>'},pg);
+      el('circle',{r:r0},G);
+      var t=el('text',{x:SIDE[u.ulke]==='l'?-(r0+5):(r0+5),y:4,'class':'t strong','text-anchor':SIDE[u.ulke]==='l'?'end':'start'},G);t.textContent=u.ulke;
+      G.style.transform='translate('+px+'px,'+py+'px)';
+      S.pt[u.ulke]={g:G,x:px,y:py};
+    });
+  });
+  var a=lab(g,x(0)+22,y(31000),['Puanı 0 olan '+zeroCount+' ülke'],{});a.setAttribute('class',a.getAttribute('class')+' at a-zero');
+  var l1=lab(g,x(17)-2,y(fitAll.a+fitAll.b*17)-14,['r = '+dec(fitAll.r,2)],{anchor:'end',strong:true});l1.setAttribute('class',l1.getAttribute('class')+' at a-trend');
+  var l2=lab(g,x(13)+10,y(fitNoUS.a+fitNoUS.b*13)+2,['ABD olmadan','r = '+dec(fitNoUS.r,2)],{strong:true});l2.setAttribute('class',l2.getAttribute('class')+' at a-trend2');
+}
+function paintScatter(cfg){
+  U.forEach(function(u){
+    var p=S.pt[u.ulke],cl=['bub'];
+    if(cfg.cool&&cfg.cool.indexOf(u.ulke)>=0)cl.push('cool');
+    if(cfg.labels&&cfg.labels.indexOf(u.ulke)>=0)cl.push('lab');
+    if(cfg.dimUSA&&u.ulke==='ABD')cl.push('dim');
+    p.g.setAttribute('class',cl.join(' '));
+  });
+  var a=cfg.ann||'';
+  S.tr1.setAttribute('opacity',/trend\b/.test(a)&&!/trend2/.test(a)?1:(/trend2/.test(a)?.35:0));
+  S.tr1.setAttribute('stroke-dasharray',/trend2/.test(a)?'3 5':'none');
+  S.tr2.setAttribute('opacity',/trend2/.test(a)?1:0);
+}
+
+/* — İkili çubuk — */
+function buildDuo(){
+  var g=$('#v-duo');clear(g);
+  var m={l:30,r:30,t:44,b:84}, bw=Math.min(120,W*.22), maxv=55000;
+  var y=lin(0,maxv,H-m.b,m.t);
+  var items=[{k:'Almanya',cx:W*.3,col:'var(--cool)'},{k:'Avustralya',cx:W*.7,col:'var(--hot)'}];
+  el('line',{x1:m.l,x2:W-m.r,y1:H-m.b,y2:H-m.b,'class':'axl'},g);
+  items.forEach(function(it){
+    var u=UM[it.k], top=y(u.toplam_med);
+    el('rect',{x:it.cx-bw/2,y:top,width:bw,height:H-m.b-top,rx:3,fill:it.col,'data-tip':'<b>'+it.k+'</b><br><span>Ortanca maliyet '+usd(u.toplam_med)+' · popülerlik '+u.pop+'</span>'},g);
+    var v=el('text',{x:it.cx,y:top-10,'class':'t big mid'},g);v.textContent=usd(u.toplam_med);
+    var n=el('text',{x:it.cx,y:H-m.b+22,'class':'t strong mid'},g);n.textContent=it.k;
+    var p=el('text',{x:it.cx,y:H-m.b+40,'class':'t mid'},g);p.textContent='Popülerlik puanı '+u.pop;
+  });
+  var lowTop=y(UM['Almanya'].toplam_med);
+  el('line',{x1:items[0].cx+bw/2,x2:items[1].cx-bw/2,y1:lowTop,y2:lowTop,'class':'al',style:'opacity:1'},g);
+  var k=el('text',{x:(items[0].cx+items[1].cx)/2,y:lowTop-10,'class':'t big mid'},g);
+  k.textContent='× '+dec(UM['Avustralya'].toplam_med/UM['Almanya'].toplam_med,1);
+}
+
+/* — Üst bütçe çubuğu, başlık ve gösterge — */
+function setBudget(b){
+  var fill=$('#b-fill'),nm=$('#b-name'),val=$('#b-val'),rel=$('#b-rel');
+  $('#b-mark').style.left=(BUDGET/MAXC*100)+'%';
+  if(!b){fill.style.width='0%';fill.className='b-fill';nm.textContent='Deniz\'in yıllık bütçesi';val.textContent=usd(BUDGET);rel.textContent='';return;}
+  fill.style.width=Math.min(100,b.cost/MAXC*100)+'%';fill.className='b-fill '+(b.cost>BUDGET?'over':'');
+  nm.textContent=b.name;val.textContent=usd(b.cost);
+  var q=b.cost/BUDGET;
+  rel.textContent=q<=1?'· bütçeye sığıyor (%'+Math.round(q*100)+')':'· bütçeyi aşıyor ('+dec(q,1)+' katı)';
+}
+function setLegend(leg){
+  var box=$('#legend');box.textContent='';
+  (leg||[]).forEach(function(l){
+    var s=document.createElement('span');s.className='lg';
+    var i=document.createElement('i');i.className='sw '+(l[0]==='base'?'':l[0]);s.appendChild(i);
+    s.appendChild(document.createTextNode(l[1]));box.appendChild(s);
+  });
+}
+function countUp(){
+  var e=$('#num');if(reduce){e.textContent=fmt(MED);return;}
+  var t0=performance.now();(function f(t){var k=Math.min(1,(t-t0)/1400);e.textContent=fmt(MED*(1-Math.pow(1-k,3)));if(k<1)requestAnimationFrame(f);})(t0);
+}
+
+function go(id,force){
+  if(!force&&id===current)return;
+  var cfg=STEPS[id];if(!cfg)return;
+  var first=current===null,prevId=current;current=id;
+  stage.setAttribute('data-view',cfg.view);
+  stage.setAttribute('data-ann',cfg.ann||'');
+  $('#cap').textContent=cfg.cap;svg.setAttribute('aria-label',cfg.cap);
+  setBudget(cfg.budget);setLegend(cfg.leg);
+  if(cfg.view==='strip')paintStrip(cfg);
+  if(cfg.view==='bubble')paintBubble(cfg);
+  if(cfg.view==='scatter')paintScatter(cfg);
+  $$('.step').forEach(function(s){s.classList.toggle('on',s.getAttribute('data-step')===id);});
+  var grp=id.charAt(0)==='i'?'i':id.slice(0,2);
+  $$('#dots a').forEach(function(a){a.classList.toggle('on',a.getAttribute('data-g')===grp);});
+  if(id==='i1'&&(force!==true)&&prevId!=='i1')countUp();
+}
+
+/* Kaydırma: tetik çizgisini geçen son adım etkin olur */
+var stepEls=$$('.step'),ticking=false;
+function trigger(){var r=stage.getBoundingClientRect();return innerWidth>=900?innerHeight*.6:r.bottom+(innerHeight-r.bottom)*.3;}
+function onScroll(){
+  if(ticking)return;ticking=true;
+  requestAnimationFrame(function(){
+    ticking=false;var t=trigger(),pick=stepEls[0],wide=innerWidth>=900;
+    for(var i=0;i<stepEls.length;i++){var b=stepEls[i].getBoundingClientRect();var ref=wide?b.top+b.height/2:b.top;if(ref<=t)pick=stepEls[i];else break;}
+    go(pick.getAttribute('data-step'));
+    var f=$('#bul').getBoundingClientRect();
+    if(f.top<innerHeight*.5)$$('#dots a').forEach(function(a){a.classList.toggle('on',a.getAttribute('data-g')==='f');});
+  });
+}
+
+/* Araç ipucu */
+svg.addEventListener('pointermove',function(e){
+  var t=e.target.closest&&e.target.closest('[data-tip]');
+  if(!t){tip.hidden=true;return;}
+  tip.innerHTML=t.getAttribute('data-tip');tip.hidden=false;
+  var pad=14,x=e.clientX+pad,y=e.clientY+pad,r=tip.getBoundingClientRect();
+  if(x+r.width>innerWidth-8)x=e.clientX-r.width-pad;if(y+r.height>innerHeight-8)y=e.clientY-r.height-pad;
+  tip.style.transform='translate('+Math.max(8,x)+'px,'+Math.max(8,y)+'px)';
+});
+svg.addEventListener('pointerleave',function(){tip.hidden=true;});
+
+/* İnşa ve yeniden boyutlandırma */
+function rebuild(){
+  var r=canvas.getBoundingClientRect();if(r.width<40||r.height<40)return;
+  W=Math.round(r.width);H=Math.round(r.height);
+  svg.setAttribute('viewBox','0 0 '+W+' '+H);
+  buildStrip();buildBars();buildBubble();buildScatter();buildDuo();
+  go(current||ORDER[0],true);
+}
+var rt;
+if(window.ResizeObserver)new ResizeObserver(function(){clearTimeout(rt);rt=setTimeout(rebuild,120);}).observe(canvas);
+window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(rebuild,160);});
+window.addEventListener('scroll',onScroll,{passive:true});
+
+/* Tema */
+$('#theme').addEventListener('click',function(){
+  var root=document.documentElement,cur=root.getAttribute('data-theme');
+  var dark=cur?cur==='dark':!(window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches);
+  root.setAttribute('data-theme',dark?'light':'dark');
+});
+
+/* Kapanış: ülke bulucu */
+var showAll=false,CAP=12;
+function val(id){return +$(id).value;}
+function score(p,b,w){
+  var liv=p.yasam===null?67.3:p.yasam;
+  var s=w[0]*(1-p.toplam/b)+w[1]*(p.pop/17)+w[2]*(1-liv/122.4);
+  return s/(w[0]+w[1]+w[2]||1);
+}
+function find(){
+  var b=val('#f-budget'),ym=val('#f-yasam'),pm=val('#f-pop'),free=$('#f-free').checked;
+  var w=[val('#w-cost'),val('#w-pop'),val('#w-liv')];
+  $('#o-budget').textContent=usd(b);$('#o-yasam').textContent=ym>=123?'sınırsız':ym;$('#o-pop').textContent=pm;
+  $('#o-wc').textContent=w[0];$('#o-wp').textContent=w[1];$('#o-wl').textContent=w[2];
+  var list=P.filter(function(p){return p.toplam<=b&&p.pop>=pm&&(!free||p.ucret===0)&&(ym>=123||(p.yasam!==null&&p.yasam<=ym));});
+  var by={};list.forEach(function(p){(by[p.ulke]=by[p.ulke]||[]).push(p);});
+  var rows=Object.keys(by).map(function(k){
+    var a=by[k].slice().sort(function(x,y){return x.toplam-y.toplam;});
+    var sc=Math.max.apply(null,a.map(function(p){return score(p,b,w);}));
+    return {ulke:k,a:a,sc:sc,med:median(a.map(function(p){return p.toplam;})),u:UM[k]};
+  }).sort(function(x,y){return y.sc-x.sc||x.med-y.med;});
+  var unis={};list.forEach(function(p){unis[p.uni]=1;});
+  var sum=$('#f-sum');
+  if(!list.length){
+    sum.innerHTML='Bu kriterlere uyan program yok.';
+    $('#f-note').textContent='Bütçeyi artır ya da filtreleri gevşet.';
+    $('#ucards').innerHTML='';$('#f-more').hidden=true;return;
+  }
+  sum.innerHTML='<span class="n">'+list.length+'</span> program, <span class="n">'+rows.length+'</span> ülke, <span class="n">'+Object.keys(unis).length+'</span> üniversite';
+  $('#f-note').textContent='Ülkeler uygunluk puanına göre sıralı (ağırlıklar: maliyet '+w[0]+', popülerlik '+w[1]+', düşük yaşam endeksi '+w[2]+').'+(ym<123?' Yaşam endeksi boş olan 8 program (Mısır, Tunus) bu filtre açıkken listede yer almaz.':'');
+  var shown=showAll?rows:rows.slice(0,CAP),html='';
+  shown.forEach(function(r){
+    var bar=Math.min(100,r.med/b*100);
+    html+='<details class="ucard"><summary><div class="u-head"><b>'+esc(r.ulke)+'</b><span>'+r.a.length+' program</span></div>'+
+      '<div class="u-bar" role="img" aria-label="Ortanca maliyet bütçenin %'+Math.round(bar)+'\'i"><i style="width:'+bar+'%"></i></div>'+
+      '<div class="u-meta">Ortanca '+usd(r.med)+' · en ucuz: '+esc(r.a[0].uni)+' ('+usd(r.a[0].toplam)+') · popülerlik '+r.u.pop+(r.u.yasam_med===null?'':' · yaşam endeksi '+dec(r.u.yasam_med,1))+'</div></summary>'+
+      '<div class="tw"><table><thead><tr><th>Üniversite</th><th>Okul ücreti</th><th>12 × kira</th><th>Toplam</th><th>Yaşam endeksi</th></tr></thead><tbody>'+
+      r.a.map(function(p){return '<tr><td>'+esc(p.uni)+'</td><td>'+usd(p.ucret)+'</td><td>'+usd(12*p.kira)+'</td><td>'+usd(p.toplam)+'</td><td>'+(p.yasam===null?'–':dec(p.yasam,1))+'</td></tr>';}).join('')+
+      '</tbody></table></div></details>';
+  });
+  $('#ucards').innerHTML=html;
+  var more=$('#f-more');more.hidden=rows.length<=CAP;more.textContent=showAll?'Daha az göster':'Tüm ülkeleri göster ('+rows.length+')';
+}
+$$('#f-form input').forEach(function(i){i.addEventListener('input',function(){showAll=false;find();});});
+$$('.ex button').forEach(function(bt){bt.addEventListener('click',function(){
+  $('#f-budget').value=bt.dataset.b;$('#f-yasam').value=bt.dataset.y;$('#f-pop').value=bt.dataset.p;$('#f-free').checked=bt.dataset.f==='1';showAll=false;find();
+});});
+$('#f-more').addEventListener('click',function(){showAll=!showAll;find();});
+
+/* Ülke tablosu */
+(function(){
+  var h='<table><thead><tr><th>Ülke</th><th>Program</th><th>Okul ücreti (ortanca)</th><th>Kira (aylık, ortanca)</th><th>Yaşam endeksi</th><th>Toplam (ortanca)</th><th>Popülerlik</th></tr></thead><tbody>';
+  U.forEach(function(u){h+='<tr><td>'+esc(u.ulke)+'</td><td>'+u.n+'</td><td>'+usd(u.ucret_med)+'</td><td>'+usd(u.kira_med)+'</td><td>'+(u.yasam_med===null?'–':dec(u.yasam_med,1))+'</td><td>'+usd(u.toplam_med)+'</td><td>'+u.pop+'</td></tr>';});
+  $('#ctable').innerHTML=h+'</tbody></table>';
+})();
+
+/* Başlat */
+find();rebuild();onScroll();
+window.__veri={P:P,U:U,go:go,STEPS:STEPS,fitAll:fitAll,fitNoUS:fitNoUS,within15:within15,under20:under20,restMed:restMed,big4Med:big4Med,usaMin:usaMin};
+})();
+</script>
+
+</body>
+</html>
